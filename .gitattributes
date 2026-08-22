@@ -1,0 +1,2 @@
+*.edf !text !filter !merge !diff
+*.bdf !text !filter !merge !diff
