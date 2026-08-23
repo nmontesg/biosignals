@@ -1,0 +1,23 @@
+# name: test/sql/biosignals.test
+# description: test biosignals extension
+# group: [sql]
+
+# Before we load the extension, this will fail
+statement error
+SELECT biosignals('Sam');
+----
+Catalog Error: Scalar Function with name biosignals does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require biosignals
+
+# Confirm the extension works
+query I
+SELECT biosignals('Sam');
+----
+...........🦆 Sam
+
+query I
+SELECT biosignals_openssl_version('Michael') ILIKE 'Biosignals Michael, my linked OpenSSL version is OpenSSL%';
+----
+true

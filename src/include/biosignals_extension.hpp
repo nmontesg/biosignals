@@ -1,10 +1,10 @@
 #pragma once
 
-#include "duckdb.hpp"
+#include "duckdb.hpp" // IWYU pragma: keep
 
 namespace duckdb {
 
-class WaddleExtension : public Extension {
+class BiosignalsExtension : public Extension {
 public:
 	void Load(ExtensionLoader &db) override;
 	std::string Name() override;
