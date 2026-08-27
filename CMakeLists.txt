@@ -19,6 +19,7 @@ set(EXTENSION_SOURCES
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
 
+set(TEST_DATA_DIR ${CMAKE_SOURCE_DIR}/../test/test_data)
 add_subdirectory(test/cpp)
 
 install(
