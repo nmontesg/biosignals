@@ -10,6 +10,12 @@ project(${TARGET_NAME})
 set(CMAKE_CXX_STANDARD "17" CACHE STRING "C++ standard to enforce")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(Boost COMPONENTS algorithm lexical_cast REQUIRED)
+if(Boost_FOUND)
+    message(STATUS "Found Boost ${Boost_INCLUDE_DIRS}")
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 include_directories(src/include)
 
 set(EXTENSION_SOURCES

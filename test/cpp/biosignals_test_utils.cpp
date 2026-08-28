@@ -10,3 +10,11 @@ void BiosignalsTestUtils::AssertStringEquals(const char *actual, const char *exp
 		throw std::runtime_error(oss.str());
 	}
 }
+
+void BiosignalsTestUtils::AssertStringEquals(const std::string &actual, const std::string &expected) {
+	if (expected.compare(actual) != 0) {
+		std::ostringstream oss;
+		oss << "Actual value (" << actual << ") does not match expected value (" << expected << ")";
+		throw std::runtime_error(oss.str());
+	}
+}
