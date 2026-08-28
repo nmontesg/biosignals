@@ -1,10 +1,11 @@
 #include "biosignals_edf_parser.hpp"
 #include "biosignals_test_utils.hpp"
 #include "duckdb/common/local_file_system.hpp"
+#include "test_biosignals_edf_parser.hpp"
 
-int main(int argc, char *argv[]) {
+void TestBiosignalsEDFParser::TestParseRawGlobalHeader(const char *filepath) {
 	duckdb::LocalFileSystem fs;
-	std::unique_ptr<duckdb::FileHandle> fh = fs.OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
+	std::unique_ptr<duckdb::FileHandle> fh = fs.OpenFile(filepath, duckdb::FileOpenFlags::FILE_FLAGS_READ);
 	duckdb::RawEDFGlobalHeader global_header = duckdb::BiosignalsEDFParser::ParseRawGlobalHeader(*fh);
 
 	BiosignalsTestUtils::AssertStringEquals(global_header.version, "0       ");
@@ -18,7 +19,4 @@ int main(int argc, char *argv[]) {
 	BiosignalsTestUtils::AssertStringEquals(global_header.reserved, "                                            ");
 	BiosignalsTestUtils::AssertStringEquals(global_header.num_records, "900     ");
 	BiosignalsTestUtils::AssertStringEquals(global_header.duration_record, "1       ");
-	std::cout << global_header.num_signals << ',' << '\n';
-
-	return 0;
 }
