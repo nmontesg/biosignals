@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iomanip>
+
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "duckdb/common/file_system.hpp"
 
@@ -19,7 +21,7 @@ struct RawEDFGlobalHeader {
 };
 
 struct EDFGlobalHeader {
-	int version;
+	string version;
 	string patient_id;
 	string recording_id;
 
@@ -37,18 +39,28 @@ struct EDFGlobalHeader {
 	float duration_record;
 	int num_signals;
 
-	// bool is_plus = false;
-	// bool is_discontinuous = false;
+	bool is_bdf = false;
+	bool is_plus = false;
+	bool is_discontinuous = false;
+
+	string GetFormattedStartTimestamp() {
+		std::ostringstream oss;
+		oss << std::setfill('0') << std::setw(4) << start_date_year << '-' << std::setw(2) << start_date_month << '-'
+		    << std::setw(2) << start_date_day << ' ' << std::setw(2) << start_time_hour << ':' << std::setw(2)
+		    << start_time_minute << ':' << std::setw(2) << start_time_seconds;
+		return oss.str();
+	}
 };
 
 class BiosignalsEDFParser {
 private:
-	static void ParseFieldFromFile(FileHandle &, idx_t &, size_t, char *, size_t);
+	static void ParseFieldFromFile(FileHandle &, idx_t &, size_t, char *);
 
 	template <typename T>
 	static void ParseFieldFromRawHeader(const char *, T &);
 
 	static vector<unsigned int> ValidateDateTime(const string &, bool = false);
+	static bool CheckBDFVersion(const char *);
 
 public:
 	static RawEDFGlobalHeader ParseRawGlobalHeader(FileHandle &);

@@ -5,14 +5,11 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/vector.hpp"
+#include <cstring>
 
 namespace duckdb {
 
-void BiosignalsEDFParser::ParseFieldFromFile(FileHandle &fh, idx_t &offset, size_t num_bytes, char *buffer,
-                                             size_t buffer_size) {
-	if (num_bytes + 1 > buffer_size) {
-		throw InternalException("EDF header field buffer too small for requested read");
-	}
+void BiosignalsEDFParser::ParseFieldFromFile(FileHandle &fh, idx_t &offset, size_t num_bytes, char *buffer) {
 	fh.Seek(offset);
 	fh.Read(buffer, num_bytes);
 	buffer[num_bytes] = '\0';
@@ -23,26 +20,18 @@ RawEDFGlobalHeader BiosignalsEDFParser::ParseRawGlobalHeader(FileHandle &fh) {
 	RawEDFGlobalHeader raw_header;
 	idx_t offset = 0;
 
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.version) - 1, raw_header.version,
-	                                        sizeof(raw_header.version));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.patient_id) - 1, raw_header.patient_id,
-	                                        sizeof(raw_header.patient_id));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.recording_id) - 1, raw_header.recording_id,
-	                                        sizeof(raw_header.recording_id));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.start_date) - 1, raw_header.start_date,
-	                                        sizeof(raw_header.start_date));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.start_time) - 1, raw_header.start_time,
-	                                        sizeof(raw_header.start_time));
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.version) - 1, raw_header.version);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.patient_id) - 1, raw_header.patient_id);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.recording_id) - 1, raw_header.recording_id);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.start_date) - 1, raw_header.start_date);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.start_time) - 1, raw_header.start_time);
 	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_header_bytes) - 1,
-	                                        raw_header.num_header_bytes, sizeof(raw_header.num_header_bytes));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.reserved) - 1, raw_header.reserved,
-	                                        sizeof(raw_header.reserved));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_records) - 1, raw_header.num_records,
-	                                        sizeof(raw_header.num_records));
+	                                        raw_header.num_header_bytes);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.reserved) - 1, raw_header.reserved);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_records) - 1, raw_header.num_records);
 	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.duration_record) - 1,
-	                                        raw_header.duration_record, sizeof(raw_header.duration_record));
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_signals) - 1, raw_header.num_signals,
-	                                        sizeof(raw_header.num_signals));
+	                                        raw_header.duration_record);
+	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_signals) - 1, raw_header.num_signals);
 
 	return raw_header;
 }
@@ -83,11 +72,21 @@ void BiosignalsEDFParser::ParseFieldFromRawHeader(const char *raw_header_field, 
 	}
 }
 
+bool BiosignalsEDFParser::CheckBDFVersion(const char *hdr_version) {
+	const uint8_t expected_bdf_version[8] = {0xFF, 0x42, 0x49, 0x4F, 0x53, 0x45, 0x4D, 0x49};
+	return std::memcmp(hdr_version, expected_bdf_version, 8) == 0;
+}
+
 EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
 	RawEDFGlobalHeader raw_header = ParseRawGlobalHeader(fh);
 	EDFGlobalHeader header;
 
-	BiosignalsEDFParser::ParseFieldFromRawHeader<int>(raw_header.version, header.version);
+	if (BiosignalsEDFParser::CheckBDFVersion(raw_header.version)) {
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_header.version + 1, header.version);
+		header.is_bdf = true;
+	} else {
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_header.version, header.version);
+	}
 	BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_header.patient_id, header.patient_id);
 	BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_header.recording_id, header.recording_id);
 
@@ -110,6 +109,18 @@ EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
 	BiosignalsEDFParser::ParseFieldFromRawHeader<int>(raw_header.num_records, header.num_records);
 	BiosignalsEDFParser::ParseFieldFromRawHeader<float>(raw_header.duration_record, header.duration_record);
 	BiosignalsEDFParser::ParseFieldFromRawHeader<int>(raw_header.num_signals, header.num_signals);
+
+	if (header.reserved == "EDF+C") {
+		header.is_plus = true;
+	} else if (header.reserved == "EDF+D") {
+		header.is_plus = true;
+		header.is_discontinuous = true;
+	} else if (header.reserved == "BDF+C") {
+		header.is_plus = true;
+	} else if (header.reserved == "BDF+D") {
+		header.is_plus = true;
+		header.is_discontinuous = true;
+	}
 
 	return header;
 }

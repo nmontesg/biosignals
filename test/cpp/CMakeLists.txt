@@ -4,10 +4,40 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_library(
   TestBiosignalsCpp ${PROJECT_SOURCE_DIR}/src/biosignals_edf_parser.cpp
-                    biosignals_test_utils.cpp test_biosignals_edf_parser.cpp)
+                    biosignals_test_utils.cpp)
 target_link_libraries(TestBiosignalsCpp duckdb)
 
-add_executable(TestBiosignalsEDFParser main_test_biosignals_edf_parser.cpp)
-target_link_libraries(TestBiosignalsEDFParser TestBiosignalsCpp)
-add_test(NAME TestBiosignalsEDFParser COMMAND TestBiosignalsEDFParser
-                                              ${TEST_DATA_DIR}/edf_example.edf)
+function(add_biosignals_parsing_test TEST_NAME TEST_SCRIPT TEST_DATA_FILE)
+  add_executable(${TEST_NAME} ${TEST_SCRIPT})
+  target_link_libraries(${TEST_NAME} TestBiosignalsCpp)
+  add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME}
+                                     ${TEST_DATA_DIR}/${TEST_DATA_FILE})
+endfunction()
+
+# test parsing header for EDF
+add_biosignals_parsing_test(TestParseEDFRawHeader test_parse_edf_raw_header.cpp
+                            edf_example.edf)
+add_biosignals_parsing_test(TestParseEDFGlobalHeader
+                            test_parse_edf_global_header.cpp edf_example.edf)
+
+# test parsing header for EDF+
+add_biosignals_parsing_test(
+  TestParseEDFPlusRawHeader test_parse_edf_plus_raw_header.cpp
+  edf_plus_example.edf)
+add_biosignals_parsing_test(
+  TestParseEDFPlusGlobalHeader test_parse_edf_plus_global_header.cpp
+  edf_plus_example.edf)
+
+# test parsing header for BDF
+add_biosignals_parsing_test(TestParseBDFRawHeader test_parse_bdf_raw_header.cpp
+                            bdf_example.bdf)
+add_biosignals_parsing_test(TestParseBDFGlobalHeader
+                            test_parse_bdf_global_header.cpp bdf_example.bdf)
+
+# test parsing header for BDF+
+add_biosignals_parsing_test(
+  TestParseBDFPlusRawHeader test_parse_bdf_plus_raw_header.cpp
+  bdf_plus_example.bdf)
+add_biosignals_parsing_test(
+  TestParseBDFPlusGlobalHeader test_parse_bdf_plus_global_header.cpp
+  bdf_plus_example.bdf)

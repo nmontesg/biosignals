@@ -2,23 +2,12 @@
 
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "biosignals_extension.hpp"
+#include "read_edf_global_header.hpp"
 
 namespace duckdb {
 
-inline void BiosignalsScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &name_vector = args.data[0];
-	UnaryExecutor::Execute<string_t, string_t>(name_vector, result, args.size(), [&](string_t name) {
-		return StringVector::AddString(result, "...........🦆 " + name.GetString());
-	});
-}
-
 static void LoadInternal(ExtensionLoader &loader) {
-	// TODO remove
-	// Register a scalar function
-	auto biosignals_scalar_function =
-	    ScalarFunction("biosignals", {LogicalType::VARCHAR}, LogicalType::VARCHAR, BiosignalsScalarFun);
-
-	loader.RegisterFunction(biosignals_scalar_function);
+	RegisterReadEDFGlobalHeader(loader);
 }
 
 void BiosignalsExtension::Load(ExtensionLoader &loader) {
