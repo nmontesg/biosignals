@@ -14,16 +14,28 @@ GARAGE_PROFILE = garage-testing
 LOCAL_DATA_SOURCE = ./test/test_data
 GARAGE_DATA_DEST = test_data
 
-test_cpp_debug: debug
+test_cpp_debug:
 	ctest --test-dir build/debug/extension/biosignals/test/cpp
 
-test_cpp_release: release
-	ctest --test-dir build/debug/extension/biosignals/test/cpp
+test_cpp_release:
+	ctest --test-dir build/release/extension/biosignals/test/cpp
+
+test_cpp_reldebug:
+	ctest --test-dir build/reldebug/extension/biosignals/test/cpp
+
+test_debug: test_cpp_debug
+	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_debug
+
+test_release: test_cpp_release
+	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_release
+
+test_reldebug: test_cpp_reldebug
+	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_reldebug
 
 configure_aws_profile:
 	aws configure set aws_access_key_id $(GARAGE_ACCESS_KEY) --profile $(GARAGE_PROFILE)
 	aws configure set aws_secret_access_key $(GARAGE_SECRET_KEY) --profile $(GARAGE_PROFILE)
-	
+
 setup_garage: configure_aws_profile stop_garage
 	podman run -d \
 		--name garage \
