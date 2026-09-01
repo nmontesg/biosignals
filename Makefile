@@ -14,14 +14,17 @@ GARAGE_PROFILE = garage-testing
 LOCAL_DATA_SOURCE = ./test/test_data
 GARAGE_DATA_DEST = test_data
 
-test_cpp_debug:
-	ctest --test-dir ./build/debug/extension/biosignals/test/cpp --output-on-failure --output-log ./ctest.log
+change_permissions_build_dir:
+	sudo chmod -R a+w ./build/
 
-test_cpp_release:
-	ctest --test-dir ./build/release/extension/biosignals/test/cpp --output-on-failure --output-log ./ctest.log
+test_cpp_debug: change_permissions_build_dir
+	ctest --test-dir ./build/debug/extension/biosignals/test/cpp --output-on-failure
 
-test_cpp_reldebug:
-	ctest --test-dir ./build/reldebug/extension/biosignals/test/cpp --output-on-failure --output-log ./ctest.log
+test_cpp_release: change_permissions_build_dir
+	ctest --test-dir ./build/release/extension/biosignals/test/cpp --output-on-failure
+
+test_cpp_reldebug: change_permissions_build_dir
+	ctest --test-dir ./build/reldebug/extension/biosignals/test/cpp --output-on-failure
 
 test_debug: test_cpp_debug
 	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_debug
