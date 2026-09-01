@@ -1,6 +1,0 @@
-outs:
-- md5: 131c2ae87780536599680991cccad355.dir
-  size: 17189896
-  nfiles: 4
-  hash: md5
-  path: test_data
