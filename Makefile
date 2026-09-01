@@ -20,14 +20,11 @@ test_cpp_debug: debug
 test_cpp_release: release
 	ctest --test-dir build/debug/extension/biosignals/test/cpp
 
-download_test_data:
-	dvc pull
-
 configure_aws_profile:
 	aws configure set aws_access_key_id $(GARAGE_ACCESS_KEY) --profile $(GARAGE_PROFILE)
 	aws configure set aws_secret_access_key $(GARAGE_SECRET_KEY) --profile $(GARAGE_PROFILE)
 	
-setup_garage: download_test_data configure_aws_profile stop_garage
+setup_garage: configure_aws_profile stop_garage
 	podman run -d \
 		--name garage \
 		-p 3900:3900 -p 3903:3903 \
