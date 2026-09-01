@@ -1,0 +1,39 @@
+# name: test/sql/biosignals_s3.test
+# description: test S3 compatibility for the biosignals extension
+# group: [sql]
+
+require-env RUN_LOCAL_S3_TESTS
+
+require biosignals
+
+require httpfs
+
+statement ok
+CREATE SECRET garage_secret (
+    TYPE s3,
+    PROVIDER config,
+	ENDPOINT 'localhost:3900',
+    KEY_ID 'GARAGEADMINACCESSKEY',
+    SECRET 'garagetestingsecretkey',
+	REGION 'garage',
+	USE_SSL false,
+	URL_STYLE 'path'
+);
+
+statement ok
+FROM read_edf_global_header('s3://biosignals-test/test_data/**');
+
+query I
+SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/**');
+----
+4
+
+query I
+SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.edf');
+----
+2
+
+query I
+SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.bdf');
+----
+2

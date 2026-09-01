@@ -2,22 +2,52 @@
 # description: test biosignals extension
 # group: [sql]
 
-# Before we load the extension, this will fail
 statement error
-SELECT biosignals('Sam');
+FROM read_edf_global_header('test/test_data/edf_example.edf');
 ----
-Catalog Error: Scalar Function with name biosignals does not exist!
+Catalog Error: Table Function with name read_edf_global_header does not exist!
 
-# Require statement will ensure this test is run with this extension loaded
 require biosignals
 
-# Confirm the extension works
-query I
-SELECT biosignals('Sam');
+# at least one argument needed
+statement error
+FROM read_edf_global_header();
 ----
-...........🦆 Sam
+
+query IIIIIIIII
+FROM read_edf_global_header('test/test_data/edf_example.edf');
+----
+test/test_data/edf_example.edf	EDF	0	test file	EDF generator	2002-10-08 14:27:00	900	1.0	16
+
+query IIIIIIIII
+FROM read_edf_global_header('test/test_data/edf_plus_example.edf');
+----
+test/test_data/edf_plus_example.edf	EDF+C	0	X X X X	Startdate 10-DEC-2009 X X test_generator	2010-12-09 12:44:02	600	1.0	12
+
+query IIIIIIIII
+FROM read_edf_global_header('test/test_data/bdf_example.bdf');
+----
+test/test_data/bdf_example.bdf	BDF	BIOSEMI	(empty)	(empty)	2005-11-01 19:37:16	60	1.0	17
+
+query IIIIIIIII
+FROM read_edf_global_header('test/test_data/bdf_plus_example.bdf');
+----
+test/test_data/bdf_plus_example.bdf	BDF+C	BIOSEMI	X X X X	Startdate 10-DEC-2009 X X test_generator	2010-12-09 12:45:54	600	1.0	12
+
+statement ok
+FROM read_edf_global_header('test/test_data/**');
 
 query I
-SELECT biosignals_openssl_version('Michael') ILIKE 'Biosignals Michael, my linked OpenSSL version is OpenSSL%';
+SELECT COUNT(*) FROM read_edf_global_header('test/test_data/**');
 ----
-true
+4
+
+query I
+SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.edf');
+----
+2
+
+query I
+SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.bdf');
+----
+2
