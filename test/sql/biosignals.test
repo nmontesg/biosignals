@@ -27,7 +27,7 @@ test/test_data/edf_plus_example.edf	EDF+C	0	X X X X	Startdate 10-DEC-2009 X X te
 query IIIIIIIII
 FROM read_edf_global_header('test/test_data/bdf_example.bdf');
 ----
-test/test_data/bdf_example.bdf	BDF	BIOSEMI	(empty)	(empty)	2005-11-01 19:37:16	60	1.0	17
+test/test_data/bdf_example.bdf	BDF	BIOSEMI	NULL	NULL	2005-11-01 19:37:16	60	1.0	17
 
 query IIIIIIIII
 FROM read_edf_global_header('test/test_data/bdf_plus_example.bdf');

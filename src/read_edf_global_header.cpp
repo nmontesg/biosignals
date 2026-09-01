@@ -64,6 +64,14 @@ unique_ptr<LocalTableFunctionState> ReadEDFGlobalHeaderLocalInit(ExecutionContex
 	return make_uniq<ReadEDFGlobalHeaderLocalState>();
 }
 
+void SetEmptyStringFieldToNull(const string &hdr_field, Vector &vector, string_t *data, const idx_t idx) {
+	if (hdr_field.empty()) {
+		vector.SetValue(idx, Value(nullptr));
+	} else {
+		data[idx] = StringVector::AddString(vector, hdr_field);
+	}
+}
+
 void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	auto &global_state = data.global_state->Cast<ReadEDFGlobalHeaderGlobalState>();
 	auto &bind_data = data.bind_data->Cast<ReadEDFGlobalHeaderBindData>();
@@ -115,9 +123,9 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 		format_data[i] = StringVector::AddString(format_vector, format_value);
 
 		// version, patient_id, record_id columns
-		version_data[i] = StringVector::AddString(version_vector, global_header.version);
-		patient_id_data[i] = StringVector::AddString(patient_id_vector, global_header.patient_id);
-		recording_id_data[i] = StringVector::AddString(recording_id_vector, global_header.recording_id);
+		SetEmptyStringFieldToNull(global_header.version, version_vector, version_data, i);
+		SetEmptyStringFieldToNull(global_header.patient_id, patient_id_vector, patient_id_data, i);
+		SetEmptyStringFieldToNull(global_header.recording_id, recording_id_vector, recording_id_data, i);
 
 		// num_records, duration, num_signals columns
 		num_records_vector.SetValue(i, Value::INTEGER(global_header.num_records));

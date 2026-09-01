@@ -45,6 +45,7 @@ struct ReadEDFGlobalHeaderLocalState : public LocalTableFunctionState {
 unique_ptr<GlobalTableFunctionState> ReadEDFGlobalHeaderGlobalInit(ClientContext &, TableFunctionInitInput &);
 unique_ptr<LocalTableFunctionState> ReadEDFGlobalHeaderLocalInit(ExecutionContext &, TableFunctionInitInput &,
                                                                  GlobalTableFunctionState *);
+void SetEmptyStringFieldToNull(const string &, Vector &, string_t *, const idx_t);
 void ReadEDFGlobalHeaderFunc(ClientContext &, TableFunctionInput &, DataChunk &);
 unique_ptr<NodeStatistics> ReadEDFGlobalHeaderCardinality(ClientContext &, const FunctionData *);
 double ReadEDFGlobalHeaderProgress(ClientContext &, const FunctionData *, const GlobalTableFunctionState *);
