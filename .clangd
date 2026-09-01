@@ -1,0 +1,8 @@
+If:
+  PathMatch: [duckdb/.*, extension-ci-tools/*]
+
+CompileFlags:
+  Add: [-w]
+
+Diagnostics:
+  Suppress: "*"
