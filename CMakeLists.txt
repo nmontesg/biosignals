@@ -12,16 +12,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost COMPONENTS algorithm lexical_cast REQUIRED)
 if(Boost_FOUND)
-    message(STATUS "Found Boost ${Boost_INCLUDE_DIRS}")
+    message(STATUS "Found Boost: ${Boost_INCLUDE_DIRS}")
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
 find_package(Git QUIET)
 if(GIT_FOUND)
   execute_process(
-    COMMAND ${GIT_EXECUTABLE} lfs pull
+    COMMAND ${GIT_EXECUTABLE} lfs fetch --all
+    COMMAND ${GIT_EXECUTABLE} lfs checkout
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    RESULT_VARIABLE GIT_LFS_RESULT
+    OUTPUT_VARIABLE GIT_LFS_OUTPUT
+    ERROR_VARIABLE GIT_LFS_ERROR
+    ECHO_OUTPUT_VARIABLE
+    ECHO_ERROR_VARIABLE
   )
 endif()
 
