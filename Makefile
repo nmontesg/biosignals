@@ -14,25 +14,22 @@ GARAGE_PROFILE = garage-testing
 LOCAL_DATA_SOURCE = ./test/test_data
 GARAGE_DATA_DEST = test_data
 
-change_permissions_build_dir:
-	sudo chmod -R a+w ./build/
-
-test_cpp_debug: change_permissions_build_dir
+test_cpp_debug:
 	ctest --test-dir ./build/debug/extension/biosignals/test/cpp --output-on-failure
 
-test_cpp_release: change_permissions_build_dir
+test_cpp_release:
 	ctest --test-dir ./build/release/extension/biosignals/test/cpp --output-on-failure
 
-test_cpp_reldebug: change_permissions_build_dir
+test_cpp_reldebug:
 	ctest --test-dir ./build/reldebug/extension/biosignals/test/cpp --output-on-failure
 
-test_debug: test_cpp_debug
+test_all_debug: test_cpp_debug
 	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_debug
 
-test_release: test_cpp_release
+test_all_release: test_cpp_release
 	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_release
 
-test_reldebug: test_cpp_reldebug
+test_all_reldebug: test_cpp_reldebug
 	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_reldebug
 
 configure_aws_profile:
