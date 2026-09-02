@@ -15,29 +15,39 @@ function(add_biosignals_parsing_test TEST_NAME TEST_SCRIPT TEST_DATA_FILE)
 endfunction()
 
 # test parsing header for EDF
-add_biosignals_parsing_test(TestParseEDFRawHeader test_parse_edf_raw_header.cpp
-                            edf_example.edf)
+add_biosignals_parsing_test(
+  TestParseEDFRawGlobalHeader test_parse_edf_raw_global_header.cpp
+  edf_example.edf)
 add_biosignals_parsing_test(TestParseEDFGlobalHeader
                             test_parse_edf_global_header.cpp edf_example.edf)
 
 # test parsing header for EDF+
 add_biosignals_parsing_test(
-  TestParseEDFPlusRawHeader test_parse_edf_plus_raw_header.cpp
+  TestParseEDFPlusRawGlobalHeader test_parse_edf_plus_raw_global_header.cpp
   edf_plus_example.edf)
 add_biosignals_parsing_test(
   TestParseEDFPlusGlobalHeader test_parse_edf_plus_global_header.cpp
   edf_plus_example.edf)
 
 # test parsing header for BDF
-add_biosignals_parsing_test(TestParseBDFRawHeader test_parse_bdf_raw_header.cpp
-                            bdf_example.bdf)
+add_biosignals_parsing_test(
+  TestParseBDFRawGlobalHeader test_parse_bdf_raw_global_header.cpp
+  bdf_example.bdf)
 add_biosignals_parsing_test(TestParseBDFGlobalHeader
                             test_parse_bdf_global_header.cpp bdf_example.bdf)
 
 # test parsing header for BDF+
 add_biosignals_parsing_test(
-  TestParseBDFPlusRawHeader test_parse_bdf_plus_raw_header.cpp
+  TestParseBDFPlusRawGlobalHeader test_parse_bdf_plus_raw_global_header.cpp
   bdf_plus_example.bdf)
 add_biosignals_parsing_test(
   TestParseBDFPlusGlobalHeader test_parse_bdf_plus_global_header.cpp
   bdf_plus_example.bdf)
+
+# # test parsing signal header for EDF add_biosignals_parsing_test(
+# TestParseEDFRawSignalHeaders test_parse_edf_raw_signal_headers.cpp
+# edf_example.edf)
+
+# # test parsing signal header for EDF add_biosignals_parsing_test(
+# TestParseEDFPlusRawSignalHeaders test_parse_edf_plus_raw_signal_headers.cpp
+# edf_plus_example.edf)

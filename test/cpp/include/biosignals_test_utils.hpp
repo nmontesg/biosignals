@@ -1,5 +1,6 @@
 #pragma once
 
+#include "biosignals_edf_parser.hpp"
 #include <sstream>
 #include <string>
 
@@ -16,4 +17,8 @@ public:
 			throw std::runtime_error(oss.str());
 		}
 	}
+
+	static void CompareRawEDFGlobalHeader(const duckdb::RawEDFGlobalHeader *, const duckdb::RawEDFGlobalHeader *,
+	                                      const bool = false);
+	static void CompareEDFGlobalHeader(const duckdb::EDFGlobalHeader *, const duckdb::EDFGlobalHeader *);
 };

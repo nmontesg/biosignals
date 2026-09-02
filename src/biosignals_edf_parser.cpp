@@ -5,7 +5,6 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/vector.hpp"
-#include <cstring>
 
 namespace duckdb {
 
@@ -123,6 +122,31 @@ EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
 	}
 
 	return header;
+}
+
+vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle &fh) {
+	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
+	int num_signals = global_hdr.num_signals;
+	if (num_signals <= 0) {
+		throw IOException("Cannot parse EDF header with non-positive number of signals (" +
+		                  std::to_string(num_signals) + ")");
+	}
+
+	vector<RawEDFSignalHeader> signal_headers(num_signals);
+	idx_t offset = sizeof(RawEDFGlobalHeader) - 10; // 10 is the number of fields in RawEDFGlobalHeader
+
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, label);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, transducer_type);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_dimension);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_min);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_max);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, digital_min);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, digital_max);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, prefiltering);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, samples_per_record);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, reserved);
+
+	return signal_headers;
 }
 
 } // namespace duckdb
