@@ -44,10 +44,22 @@ add_biosignals_parsing_test(
   TestParseBDFPlusGlobalHeader test_parse_bdf_plus_global_header.cpp
   bdf_plus_example.bdf)
 
-# # test parsing signal header for EDF add_biosignals_parsing_test(
-# TestParseEDFRawSignalHeaders test_parse_edf_raw_signal_headers.cpp
-# edf_example.edf)
+# test parsing signal header for EDF
+add_biosignals_parsing_test(
+  TestParseEDFRawSignalHeaders test_parse_edf_raw_signal_headers.cpp
+  edf_example.edf)
 
-# # test parsing signal header for EDF add_biosignals_parsing_test(
-# TestParseEDFPlusRawSignalHeaders test_parse_edf_plus_raw_signal_headers.cpp
-# edf_plus_example.edf)
+# test parsing signal header for EDF+
+add_biosignals_parsing_test(
+  TestParseEDFPlusRawSignalHeaders test_parse_edf_plus_raw_signal_headers.cpp
+  edf_plus_example.edf)
+
+# test parsing signal header for BDF
+add_biosignals_parsing_test(
+  TestParseBDFRawSignalHeaders test_parse_bdf_raw_signal_headers.cpp
+  bdf_example.bdf)
+
+# test parsing signal header for BDF+
+add_biosignals_parsing_test(
+  TestParseBDFPlusRawSignalHeaders test_parse_bdf_plus_raw_signal_headers.cpp
+  bdf_plus_example.bdf)

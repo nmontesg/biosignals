@@ -62,3 +62,17 @@ void BiosignalsTestUtils::CompareEDFGlobalHeader(const duckdb::EDFGlobalHeader *
 	BiosignalsTestUtils::AssertEquals<bool>(actual->is_plus, expected->is_plus);
 	BiosignalsTestUtils::AssertEquals<bool>(actual->is_discontinuous, expected->is_discontinuous);
 }
+
+void BiosignalsTestUtils::CompareRawEDFSignalHeader(const duckdb::RawEDFSignalHeader *actual,
+                                                    const duckdb::RawEDFSignalHeader *expected) {
+	BiosignalsTestUtils::AssertStringEquals(actual->label, expected->label);
+	BiosignalsTestUtils::AssertStringEquals(actual->transducer_type, expected->transducer_type);
+	BiosignalsTestUtils::AssertStringEquals(actual->physical_dimension, expected->physical_dimension);
+	BiosignalsTestUtils::AssertStringEquals(actual->physical_min, expected->physical_min);
+	BiosignalsTestUtils::AssertStringEquals(actual->physical_max, expected->physical_max);
+	BiosignalsTestUtils::AssertStringEquals(actual->digital_min, expected->digital_min);
+	BiosignalsTestUtils::AssertStringEquals(actual->digital_max, expected->digital_max);
+	BiosignalsTestUtils::AssertStringEquals(actual->prefiltering, expected->prefiltering);
+	BiosignalsTestUtils::AssertStringEquals(actual->samples_per_record, expected->samples_per_record);
+	BiosignalsTestUtils::AssertStringEquals(actual->reserved, expected->reserved);
+}

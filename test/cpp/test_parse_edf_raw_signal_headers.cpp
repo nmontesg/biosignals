@@ -23,14 +23,7 @@ int main(int argc, char *argv[]) {
 
 	size_t num_hdrs_check = expected_headers.size();
 	for (idx_t i = 0; i < num_hdrs_check; i++) {
-		BiosignalsTestUtils::AssertStringEquals(headers[i].label, expected_headers[i].label);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].transducer_type, expected_headers[i].transducer_type);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].physical_dimension, expected_headers[i].physical_dimension);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].physical_min, expected_headers[i].physical_min);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].physical_max, expected_headers[i].physical_max);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].prefiltering, expected_headers[i].prefiltering);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].samples_per_record, expected_headers[i].samples_per_record);
-		BiosignalsTestUtils::AssertStringEquals(headers[i].reserved, expected_headers[i].reserved);
+		BiosignalsTestUtils::CompareRawEDFSignalHeader(&headers[i], &expected_headers[i]);
 	}
 
 	return 0;
