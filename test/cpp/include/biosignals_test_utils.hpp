@@ -23,4 +23,5 @@ public:
 	static void CompareEDFGlobalHeader(const duckdb::EDFGlobalHeader *, const duckdb::EDFGlobalHeader *);
 
 	static void CompareRawEDFSignalHeader(const duckdb::RawEDFSignalHeader *, const duckdb::RawEDFSignalHeader *);
+	static void CompareEDFSignalHeader(const duckdb::EDFSignalHeader *, const duckdb::EDFSignalHeader *);
 };

@@ -67,7 +67,7 @@ void BiosignalsTestUtils::CompareRawEDFSignalHeader(const duckdb::RawEDFSignalHe
                                                     const duckdb::RawEDFSignalHeader *expected) {
 	BiosignalsTestUtils::AssertStringEquals(actual->label, expected->label);
 	BiosignalsTestUtils::AssertStringEquals(actual->transducer_type, expected->transducer_type);
-	BiosignalsTestUtils::AssertStringEquals(actual->physical_dimension, expected->physical_dimension);
+	BiosignalsTestUtils::AssertStringEquals(actual->physical_dim, expected->physical_dim);
 	BiosignalsTestUtils::AssertStringEquals(actual->physical_min, expected->physical_min);
 	BiosignalsTestUtils::AssertStringEquals(actual->physical_max, expected->physical_max);
 	BiosignalsTestUtils::AssertStringEquals(actual->digital_min, expected->digital_min);
@@ -75,4 +75,19 @@ void BiosignalsTestUtils::CompareRawEDFSignalHeader(const duckdb::RawEDFSignalHe
 	BiosignalsTestUtils::AssertStringEquals(actual->prefiltering, expected->prefiltering);
 	BiosignalsTestUtils::AssertStringEquals(actual->samples_per_record, expected->samples_per_record);
 	BiosignalsTestUtils::AssertStringEquals(actual->reserved, expected->reserved);
+}
+
+void BiosignalsTestUtils::CompareEDFSignalHeader(const duckdb::EDFSignalHeader *actual,
+                                                 const duckdb::EDFSignalHeader *expected) {
+	BiosignalsTestUtils::AssertStringEquals(actual->label, expected->label);
+	BiosignalsTestUtils::AssertStringEquals(actual->transducer_type, expected->transducer_type);
+	BiosignalsTestUtils::AssertStringEquals(actual->physical_dim, expected->physical_dim);
+	BiosignalsTestUtils::AssertEquals<float>(actual->physical_min, expected->physical_min);
+	BiosignalsTestUtils::AssertEquals<float>(actual->physical_max, expected->physical_max);
+	BiosignalsTestUtils::AssertEquals<int>(actual->digital_min, expected->digital_min);
+	BiosignalsTestUtils::AssertEquals<int>(actual->digital_max, expected->digital_max);
+	BiosignalsTestUtils::AssertStringEquals(actual->prefiltering, expected->prefiltering);
+	BiosignalsTestUtils::AssertEquals<unsigned int>(actual->samples_per_record, expected->samples_per_record);
+	BiosignalsTestUtils::AssertStringEquals(actual->reserved, expected->reserved);
+	BiosignalsTestUtils::AssertEquals<bool>(actual->is_annotation, expected->is_annotation);
 }

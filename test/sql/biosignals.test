@@ -7,7 +7,14 @@ FROM read_edf_global_header('test/test_data/edf_example.edf');
 ----
 Catalog Error: Table Function with name read_edf_global_header does not exist!
 
+statement error
+FROM read_edf_signal_headers('test/test_data/edf_example.edf');
+----
+Catalog Error: Table Function with name read_edf_signal_headers does not exist!
+
 require biosignals
+
+# ===================== read_edf_global_header =====================
 
 # at least one argument needed
 statement error
@@ -51,3 +58,50 @@ query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.bdf');
 ----
 2
+
+
+# ===================== read_edf_signal_headers =====================
+
+# at least one argument needed
+statement error
+FROM read_edf_signal_headers();
+----
+
+query IIIIIIIIIIII
+FROM read_edf_signal_headers('test/test_data/edf_example.edf') ORDER BY signal_id LIMIT 3;
+----
+test/test_data/edf_example.edf	1	F4	AgAgCl	uV	-3200.0	3200.0	-32768	32767	HP:0.015Hz	200	false
+test/test_data/edf_example.edf	2	F3	AgAgCl	uV	-3200.0	3200.0	-32768	32767	HP:0.015Hz	100	false
+test/test_data/edf_example.edf	3	X10	AgAgCl	mV	-1.6	1.6	-32768	32767	HP:0.015Hz	200	false
+
+query IIIIIIIIIIII
+FROM read_edf_signal_headers('test/test_data/edf_plus_example.edf') ORDER BY signal_id LIMIT 2;
+----
+test/test_data/edf_plus_example.edf	1	squarewave	NULL	uV	-1000.0	1000.0	-32768	32767	NULL	200	false
+test/test_data/edf_plus_example.edf	2	ramp	NULL	uV	-1000.0	1000.0	-32768	32767	NULL	200	false
+
+query IIIIIIIIIIII
+FROM read_edf_signal_headers('test/test_data/edf_plus_example.edf') ORDER BY signal_id DESC LIMIT 1;
+----
+test/test_data/edf_plus_example.edf	12	EDF Annotations	NULL	NULL	-1.0	1.0	-32768	32767	NULL	51	true
+
+query IIIIIIIIIIII
+FROM read_edf_signal_headers('test/test_data/bdf_example.bdf') ORDER BY signal_id LIMIT 3;
+----
+test/test_data/bdf_example.bdf	1	A1	Active Electrode, pin type	uV	-262144.0	262144.0	-8388608	8388607	HP: DC; LP: 500 Hz	2048	false
+test/test_data/bdf_example.bdf	2	A2	Active Electrode, pin type	uV	-262144.0	262144.0	-8388608	8388607	HP: DC; LP: 500 Hz	2048	false
+test/test_data/bdf_example.bdf	3	A3	Active Electrode, pin type	uV	-262144.0	262144.0	-8388608	8388607	HP: DC; LP: 500 Hz	2048	false
+
+query IIIIIIIIIIII
+FROM read_edf_signal_headers('test/test_data/bdf_plus_example.bdf') ORDER BY signal_id LIMIT 2;
+----
+test/test_data/bdf_plus_example.bdf	1	squarewave	NULL	uV	-1000.0	1000.0	-8388608	8388607	NULL	200	false
+test/test_data/bdf_plus_example.bdf	2	ramp	NULL	uV	-1000.0	1000.0	-8388608	8388607	NULL	200	false
+
+query IIIIIIIIIIII
+FROM read_edf_signal_headers('test/test_data/bdf_plus_example.bdf') ORDER BY signal_id DESC LIMIT 1;
+----
+test/test_data/bdf_plus_example.bdf	12	BDF Annotations	NULL	NULL	-1.0	1.0	-8388608	8388607	NULL	34	true
+
+statement ok
+FROM read_edf_signal_headers('test/test_data/**');

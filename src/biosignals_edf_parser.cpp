@@ -109,14 +109,14 @@ EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
 	BiosignalsEDFParser::ParseFieldFromRawHeader<float>(raw_header.duration_record, header.duration_record);
 	BiosignalsEDFParser::ParseFieldFromRawHeader<int>(raw_header.num_signals, header.num_signals);
 
-	if (header.reserved == "EDF+C") {
+	if (header.reserved == EDF_PLUS_CONTINUOUS) {
 		header.is_plus = true;
-	} else if (header.reserved == "EDF+D") {
+	} else if (header.reserved == EDF_PLUS_DISCONTINUOUS) {
 		header.is_plus = true;
 		header.is_discontinuous = true;
-	} else if (header.reserved == "BDF+C") {
+	} else if (header.reserved == BDF_PLUS_CONTINUOUS) {
 		header.is_plus = true;
-	} else if (header.reserved == "BDF+D") {
+	} else if (header.reserved == BDF_PLUS_DISCONTINUOUS) {
 		header.is_plus = true;
 		header.is_discontinuous = true;
 	}
@@ -124,8 +124,8 @@ EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
 	return header;
 }
 
-vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle &fh) {
-	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
+vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle &fh,
+                                                                      const EDFGlobalHeader &global_hdr) {
 	int num_signals = global_hdr.num_signals;
 	if (num_signals <= 0) {
 		throw IOException("Cannot parse EDF header with non-positive number of signals (" +
@@ -137,7 +137,7 @@ vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle
 
 	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, label);
 	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, transducer_type);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_dimension);
+	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_dim);
 	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_min);
 	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_max);
 	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, digital_min);
@@ -147,6 +147,49 @@ vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle
 	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, reserved);
 
 	return signal_headers;
+}
+
+vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle &fh) {
+	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
+	return BiosignalsEDFParser::ParseRawSignalHeaders(fh, global_hdr);
+}
+
+vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh) {
+	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
+	vector<RawEDFSignalHeader> raw_signal_hdrs = BiosignalsEDFParser::ParseRawSignalHeaders(fh, global_hdr);
+	size_t num_hdrs = raw_signal_hdrs.size();
+	vector<EDFSignalHeader> signal_hdrs(num_hdrs);
+
+	for (idx_t i = 0; i < num_hdrs; i++) {
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_signal_hdrs[i].label, signal_hdrs[i].label);
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_signal_hdrs[i].transducer_type,
+		                                                     signal_hdrs[i].transducer_type);
+
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_signal_hdrs[i].physical_dim,
+		                                                     signal_hdrs[i].physical_dim);
+		BiosignalsEDFParser::ParseFieldFromRawHeader<float>(raw_signal_hdrs[i].physical_min,
+		                                                    signal_hdrs[i].physical_min);
+		BiosignalsEDFParser::ParseFieldFromRawHeader<float>(raw_signal_hdrs[i].physical_max,
+		                                                    signal_hdrs[i].physical_max);
+
+		BiosignalsEDFParser::ParseFieldFromRawHeader<int>(raw_signal_hdrs[i].digital_min, signal_hdrs[i].digital_min);
+		BiosignalsEDFParser::ParseFieldFromRawHeader<int>(raw_signal_hdrs[i].digital_max, signal_hdrs[i].digital_max);
+
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_signal_hdrs[i].prefiltering,
+		                                                     signal_hdrs[i].prefiltering);
+		BiosignalsEDFParser::ParseFieldFromRawHeader<unsigned int>(raw_signal_hdrs[i].samples_per_record,
+		                                                           signal_hdrs[i].samples_per_record);
+		BiosignalsEDFParser::ParseFieldFromRawHeader<string>(raw_signal_hdrs[i].reserved, signal_hdrs[i].reserved);
+
+		if (global_hdr.is_bdf) {
+			signal_hdrs[i].is_annotation = (signal_hdrs[i].label == BDF_ANNOTATIONS) ? true : false;
+		} else {
+			signal_hdrs[i].is_annotation = (signal_hdrs[i].label == EDF_ANNOTATIONS) ? true : false;
+		}
+		signal_hdrs[i].ComputeSlopeAndOffset();
+	}
+
+	return signal_hdrs;
 }
 
 } // namespace duckdb

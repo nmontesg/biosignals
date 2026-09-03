@@ -76,8 +76,6 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 	auto &global_state = data.global_state->Cast<ReadEDFGlobalHeaderGlobalState>();
 	auto &bind_data = data.bind_data->Cast<ReadEDFGlobalHeaderBindData>();
 
-	string dicom_logtype = "dicom";
-
 	idx_t start_idx, end_idx;
 	if (!global_state.GetWorkItem(start_idx, end_idx)) {
 		output.SetCardinality(0);
@@ -167,7 +165,7 @@ void RegisterReadEDFGlobalHeader(ExtensionLoader &loader) {
 	CreateTableFunctionInfo read_edf_global_header_info(read_edf_global_header_func);
 	FunctionDescription read_edf_global_header_desc;
 
-	read_edf_global_header_desc.parameter_types = {LogicalType::VARCHAR, LogicalType::BOOLEAN};
+	read_edf_global_header_desc.parameter_types = {LogicalType::VARCHAR};
 	read_edf_global_header_desc.parameter_names = {"path"};
 	read_edf_global_header_desc.description = "Read global header information from EDF(+) / BDF(+) files into DuckDB.";
 	read_edf_global_header_desc.examples = {"FROM read_edf_global_header('/path/to/recording.edf');",

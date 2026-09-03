@@ -1,9 +1,20 @@
 #pragma once
 
+#include <cfloat>
+#include <cstddef>
 #include <iomanip>
+#include <string>
 
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "duckdb/common/file_system.hpp"
+
+#define EDF_PLUS_CONTINUOUS    "EDF+C"
+#define EDF_PLUS_DISCONTINUOUS "EDF+D"
+#define EDF_ANNOTATIONS        "EDF Annotations"
+
+#define BDF_PLUS_CONTINUOUS    "BDF+C"
+#define BDF_PLUS_DISCONTINUOUS "BDF+D"
+#define BDF_ANNOTATIONS        "BDF Annotations"
 
 namespace duckdb {
 
@@ -74,7 +85,7 @@ struct EDFGlobalHeader {
 struct RawEDFSignalHeader {
 	char label[17];
 	char transducer_type[81];
-	char physical_dimension[9];
+	char physical_dim[9];
 	char physical_min[9];
 	char physical_max[9];
 	char digital_min[9];
@@ -85,10 +96,9 @@ struct RawEDFSignalHeader {
 
 	bool operator==(const RawEDFSignalHeader &rhs) const {
 		return (strcmp(label, rhs.label) == 0) && (strcmp(transducer_type, rhs.transducer_type) == 0) &&
-		       (strcmp(physical_dimension, rhs.physical_dimension) == 0) &&
-		       (strcmp(physical_min, rhs.physical_min) == 0) && (strcmp(physical_max, rhs.physical_max) == 0) &&
-		       (strcmp(digital_min, rhs.digital_min) == 0) && (strcmp(digital_max, rhs.digital_max) == 0) &&
-		       (strcmp(prefiltering, rhs.prefiltering) == 0) &&
+		       (strcmp(physical_dim, rhs.physical_dim) == 0) && (strcmp(physical_min, rhs.physical_min) == 0) &&
+		       (strcmp(physical_max, rhs.physical_max) == 0) && (strcmp(digital_min, rhs.digital_min) == 0) &&
+		       (strcmp(digital_max, rhs.digital_max) == 0) && (strcmp(prefiltering, rhs.prefiltering) == 0) &&
 		       (strcmp(samples_per_record, rhs.samples_per_record) == 0) && (strcmp(reserved, rhs.reserved) == 0);
 	};
 };
@@ -98,6 +108,58 @@ struct RawEDFSignalHeader {
 		BiosignalsEDFParser::ParseFieldFromFile(FH, OFFSET, sizeof(RawEDFSignalHeader::FIELD) - 1,                     \
 		                                        SIGNAL_HEADERS[i].FIELD);                                              \
 	}
+
+struct EDFSignalHeader {
+	string label;
+	string transducer_type;
+
+	string physical_dim;
+	float physical_min;
+	float physical_max;
+
+	int digital_min;
+	int digital_max;
+
+	string prefiltering;
+	unsigned int samples_per_record;
+	string reserved;
+
+	bool is_annotation = false;
+
+	// derived fields
+	float slope;
+	float offset;
+
+	void ComputeSlopeAndOffset() {
+		if (digital_max == digital_min) {
+			slope = FLT_MAX;
+			offset = 0;
+		} else {
+			slope = (physical_max - physical_min) / (float)(digital_max - digital_min);
+			offset = (physical_min * (float)(digital_max)-physical_max * (float)(digital_min)) /
+			         (float)(digital_max - digital_min);
+		}
+	};
+
+	explicit EDFSignalHeader() {};
+
+	explicit EDFSignalHeader(const string &_lab, const string &_tt, const string &_physdim, float _pmin, float _pmax,
+	                         int _dmin, int _dmax, const string &_prefil, unsigned int _spr, const string &_res,
+	                         bool _is_ann)
+	    : label(_lab), transducer_type(_tt), physical_dim(_physdim), physical_min(_pmin), physical_max(_pmax),
+	      digital_min(_dmin), digital_max(_dmax), prefiltering(_prefil), samples_per_record(_spr), reserved(_res),
+	      is_annotation(_is_ann) {
+		ComputeSlopeAndOffset();
+	};
+
+	bool operator==(const EDFSignalHeader &rhs) const {
+		return (label == rhs.label) && (transducer_type == rhs.transducer_type) && (physical_dim == rhs.physical_dim) &&
+		       (physical_min == rhs.physical_min) && (physical_max == rhs.physical_max) &&
+		       (digital_min == rhs.digital_max) && (prefiltering == rhs.prefiltering) &&
+		       (samples_per_record == rhs.samples_per_record) && (reserved == rhs.reserved) &&
+		       (is_annotation == rhs.is_annotation);
+	}
+};
 
 class BiosignalsEDFParser {
 private:
@@ -113,7 +175,9 @@ public:
 	static RawEDFGlobalHeader ParseRawGlobalHeader(FileHandle &);
 	static EDFGlobalHeader ParseGlobalHeader(FileHandle &);
 
+	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(FileHandle &, const EDFGlobalHeader &);
 	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(FileHandle &);
+	static vector<EDFSignalHeader> ParseSignalHeaders(FileHandle &);
 };
 
 } // namespace duckdb

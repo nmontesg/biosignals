@@ -1,10 +1,10 @@
 #include "biosignals_edf_parser.hpp"
 #include "biosignals_test_utils.hpp"
-#include "duckdb/common/local_file_system.hpp"
+#include "duckdb/common/file_system.hpp"
 
 int main(int argc, char *argv[]) {
-	duckdb::LocalFileSystem fs;
-	std::unique_ptr<duckdb::FileHandle> fh = fs.OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
+	std::unique_ptr<duckdb::FileSystem> fs = duckdb::FileSystem::CreateLocal();
+	std::unique_ptr<duckdb::FileHandle> fh = fs->OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
 	duckdb::EDFGlobalHeader global_header = duckdb::BiosignalsEDFParser::ParseGlobalHeader(*fh);
 
 	duckdb::EDFGlobalHeader expected_header;
