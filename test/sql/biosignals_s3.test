@@ -20,6 +20,9 @@ CREATE SECRET garage_secret (
 	URL_STYLE 'path'
 );
 
+
+# ===================== read_edf_global_header =====================
+
 statement ok
 FROM read_edf_global_header('s3://biosignals-test/test_data/**');
 
@@ -37,3 +40,23 @@ query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.bdf');
 ----
 2
+
+# ===================== read_edf_signal_headers =====================
+
+statement ok
+FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
+
+query I
+SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
+----
+57
+
+query I
+SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/*.edf');
+----
+28
+
+query I
+SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/*.bdf');
+----
+29

@@ -119,7 +119,6 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 		size_t num_signals = signal_headers.size();
 
 		for (idx_t j = 0; j < num_signals; j++) {
-
 			idx_t idx_eff = num_signals_acc + j;
 
 			filename_data[idx_eff] = StringVector::AddString(filename_vector, filename);
@@ -127,21 +126,22 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 			signal_id_vector.SetValue(idx_eff, Value::UINTEGER(j + 1));
 
 			SetEmptyStringFieldToNull(signal_headers[j].label, label_vector, label_data, idx_eff);
-			SetEmptyStringFieldToNull(signal_headers[j].transducer_type, transducer_type_vector, transducer_type_data, idx_eff);
+			SetEmptyStringFieldToNull(signal_headers[j].transducer_type, transducer_type_vector, transducer_type_data,
+			                          idx_eff);
 			SetEmptyStringFieldToNull(signal_headers[j].physical_dim, physical_dim_vector, physical_dim_data, idx_eff);
-			
+
 			physical_min_vector.SetValue(idx_eff, Value::FLOAT(signal_headers[j].physical_min));
 			physical_max_vector.SetValue(idx_eff, Value::FLOAT(signal_headers[j].physical_max));
-			
+
 			digital_min_vector.SetValue(idx_eff, Value::INTEGER(signal_headers[j].digital_min));
 			digital_max_vector.SetValue(idx_eff, Value::INTEGER(signal_headers[j].digital_max));
-			
+
 			SetEmptyStringFieldToNull(signal_headers[j].prefiltering, prefiltering_vector, prefiltering_data, idx_eff);
-			
+
 			samples_per_record_vector.SetValue(idx_eff, Value::UINTEGER(signal_headers[j].samples_per_record));
-			
+
 			is_annotation_vector.SetValue(idx_eff, Value::BOOLEAN(signal_headers[j].is_annotation));
-			
+
 			actual_count += 1;
 		}
 		num_signals_acc += num_signals;
@@ -155,23 +155,24 @@ unique_ptr<NodeStatistics> ReadEDFSignalHeadersCardinality(ClientContext &contex
 }
 
 double ReadEDFSignalHeadersProgress(ClientContext &context, const FunctionData *bind_data_p,
-                                   const GlobalTableFunctionState *global_state_p) {
+                                    const GlobalTableFunctionState *global_state_p) {
 	return ReadEDFGlobalHeaderProgress(context, bind_data_p, global_state_p);
 }
 
 void RegisterReadEDFSignalHeaders(ExtensionLoader &loader) {
-	TableFunction read_edf_signal_headers_func("read_edf_signal_headers", {LogicalType::VARCHAR}, ReadEDFSignalHeadersFunc,
-	                                          ReadEDFSignalHeadersFuncBind, ReadEDFSignalHeadersGlobalInit,
-	                                          ReadEDFSignalHeadersLocalInit);
+	TableFunction read_edf_signal_headers_func("read_edf_signal_headers", {LogicalType::VARCHAR},
+	                                           ReadEDFSignalHeadersFunc, ReadEDFSignalHeadersFuncBind,
+	                                           ReadEDFSignalHeadersGlobalInit, ReadEDFSignalHeadersLocalInit);
 
 	CreateTableFunctionInfo read_edf_signal_headers_info(read_edf_signal_headers_func);
 	FunctionDescription read_edf_signal_headers_desc;
 
 	read_edf_signal_headers_desc.parameter_types = {LogicalType::VARCHAR};
 	read_edf_signal_headers_desc.parameter_names = {"path"};
-	read_edf_signal_headers_desc.description = "Read signal information from the headers of EDF(+) / BDF(+) files into DuckDB.";
+	read_edf_signal_headers_desc.description =
+	    "Read signal information from the headers of EDF(+) / BDF(+) files into DuckDB.";
 	read_edf_signal_headers_desc.examples = {"FROM read_edf_signal_headers('/path/to/recording.edf');",
-	                                        "FROM read_edf_signal_headers('/path/to/all_recordings/*');"};
+	                                         "FROM read_edf_signal_headers('/path/to/all_recordings/*');"};
 	read_edf_signal_headers_desc.categories = {"medical"};
 	read_edf_signal_headers_info.descriptions.push_back(read_edf_signal_headers_desc);
 
