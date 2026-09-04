@@ -10,16 +10,16 @@ int main(int argc, char *argv[]) {
 
 	std::vector<duckdb::RawEDFSignalHeader> expected_headers;
 	expected_headers.reserve(2);
-	expected_headers.push_back({"squarewave      ",
-	                            "                                                                                ",
-	                            "uV      ", "-1000.00", "1000.000", "-8388608", "8388607 ",
-	                            "                                                                                ",
-	                            "200     ", "                                "});
-	expected_headers.push_back({"ramp            ",
-	                            "                                                                                ",
-	                            "uV      ", "-1000.00", "1000.000", "-8388608", "8388607 ",
-	                            "                                                                                ",
-	                            "200     ", "                                "});
+	expected_headers.push_back(duckdb::RawEDFSignalHeader {
+	    "squarewave      ", "                                                                                ",
+	    "uV      ", "-1000.00", "1000.000", "-8388608", "8388607 ",
+	    "                                                                                ", "200     ",
+	    "                                "});
+	expected_headers.push_back(duckdb::RawEDFSignalHeader {
+	    "ramp            ", "                                                                                ",
+	    "uV      ", "-1000.00", "1000.000", "-8388608", "8388607 ",
+	    "                                                                                ", "200     ",
+	    "                                "});
 
 	size_t num_hdrs_check = expected_headers.size();
 	for (idx_t i = 0; i < num_hdrs_check; i++) {
