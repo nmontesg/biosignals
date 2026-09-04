@@ -7,16 +7,18 @@ int main(int argc, char *argv[]) {
 	std::unique_ptr<duckdb::FileHandle> fh = fs->OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
 	std::vector<duckdb::RawEDFSignalHeader> headers = duckdb::BiosignalsEDFParser::ParseRawSignalHeaders(*fh);
 
-	std::vector<duckdb::RawEDFSignalHeader> expected_headers = {
-	    {"squarewave      ", "                                                                                ",
-	     "uV      ", "-1000.00", "1000.000", "-32768  ", "32767   ",
-	     "                                                                                ", "200     ",
-	     "                                "},
-	    {"ramp            ", "                                                                                ",
-	     "uV      ", "-1000.00", "1000.000", "-32768  ", "32767   ",
-	     "                                                                                ", "200     ",
-	     "                                "},
-	};
+	std::vector<duckdb::RawEDFSignalHeader> expected_headers;
+	expected_headers.reserve(2);
+	expected_headers.push_back({"squarewave      ",
+	                            "                                                                                ",
+	                            "uV      ", "-1000.00", "1000.000", "-32768  ", "32767   ",
+	                            "                                                                                ",
+	                            "200     ", "                                "});
+	expected_headers.push_back({"ramp            ",
+	                            "                                                                                ",
+	                            "uV      ", "-1000.00", "1000.000", "-32768  ", "32767   ",
+	                            "                                                                                ",
+	                            "200     ", "                                "});
 
 	size_t num_hdrs_check = expected_headers.size();
 	for (idx_t i = 0; i < num_hdrs_check; i++) {
