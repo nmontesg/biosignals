@@ -2,7 +2,8 @@
   "dependencies": [
     "boost-algorithm",
     "boost-lexical-cast",
-    "curl"
+    "curl",
+    "openssl"
   ],
   "vcpkg-configuration": {
     "overlay-ports": ["./extension-ci-tools/vcpkg_ports"],
