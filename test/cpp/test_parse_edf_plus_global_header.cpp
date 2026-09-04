@@ -6,6 +6,7 @@ int main(int argc, char *argv[]) {
 	std::unique_ptr<duckdb::FileSystem> fs = duckdb::FileSystem::CreateLocal();
 	std::unique_ptr<duckdb::FileHandle> fh = fs->OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
 	duckdb::EDFGlobalHeader global_header = duckdb::BiosignalsEDFParser::ParseGlobalHeader(*fh);
+	fh->Close();
 
 	duckdb::EDFGlobalHeader expected_header;
 	expected_header.version = "0";

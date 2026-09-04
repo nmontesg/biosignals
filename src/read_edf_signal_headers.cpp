@@ -116,6 +116,7 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 		auto filename = bind_data.files[file_index].path;
 		auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
 		auto signal_headers = BiosignalsEDFParser::ParseSignalHeaders(*file_handle);
+		file_handle->Close();
 		size_t num_signals = signal_headers.size();
 
 		for (idx_t j = 0; j < num_signals; j++) {

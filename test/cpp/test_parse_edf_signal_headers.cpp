@@ -6,6 +6,7 @@ int main(int argc, char *argv[]) {
 	std::unique_ptr<duckdb::FileSystem> fs = duckdb::FileSystem::CreateLocal();
 	std::unique_ptr<duckdb::FileHandle> fh = fs->OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
 	std::vector<duckdb::EDFSignalHeader> headers = duckdb::BiosignalsEDFParser::ParseSignalHeaders(*fh);
+	fh->Close();
 
 	std::vector<duckdb::EDFSignalHeader> expected_headers = {
 	    duckdb::EDFSignalHeader("F4", "AgAgCl", "uV", -3200.0, 3200.0, -32768, 32767, "HP:0.015Hz", 200, "", false),

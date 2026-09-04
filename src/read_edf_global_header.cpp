@@ -111,6 +111,7 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 
 		auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
 		auto global_header = BiosignalsEDFParser::ParseGlobalHeader(*file_handle);
+		file_handle->Close();
 
 		// format column
 		string format_value =
