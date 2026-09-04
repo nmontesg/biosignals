@@ -138,7 +138,11 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 
 			SetEmptyStringFieldToNull(signal_headers[j].prefiltering, prefiltering_vector, prefiltering_data, idx_eff);
 
-			samples_per_record_vector.SetValue(idx_eff, Value::UINTEGER(signal_headers[j].samples_per_record));
+			if (signal_headers[j].is_annotation) {
+				samples_per_record_vector.SetValue(idx_eff, Value(nullptr));
+			} else {
+				samples_per_record_vector.SetValue(idx_eff, Value::UINTEGER(signal_headers[j].samples_per_record));
+			}
 
 			is_annotation_vector.SetValue(idx_eff, Value::BOOLEAN(signal_headers[j].is_annotation));
 

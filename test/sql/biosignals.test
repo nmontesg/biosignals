@@ -83,7 +83,7 @@ test/test_data/edf_plus_example.edf	2	ramp	NULL	uV	-1000.0	1000.0	-32768	32767	N
 query IIIIIIIIIIII
 FROM read_edf_signal_headers('test/test_data/edf_plus_example.edf') ORDER BY signal_id DESC LIMIT 1;
 ----
-test/test_data/edf_plus_example.edf	12	EDF Annotations	NULL	NULL	-1.0	1.0	-32768	32767	NULL	51	true
+test/test_data/edf_plus_example.edf	12	EDF Annotations	NULL	NULL	-1.0	1.0	-32768	32767	NULL	NULL	true
 
 query IIIIIIIIIIII
 FROM read_edf_signal_headers('test/test_data/bdf_example.bdf') ORDER BY signal_id LIMIT 3;
@@ -101,7 +101,7 @@ test/test_data/bdf_plus_example.bdf	2	ramp	NULL	uV	-1000.0	1000.0	-8388608	83886
 query IIIIIIIIIIII
 FROM read_edf_signal_headers('test/test_data/bdf_plus_example.bdf') ORDER BY signal_id DESC LIMIT 1;
 ----
-test/test_data/bdf_plus_example.bdf	12	BDF Annotations	NULL	NULL	-1.0	1.0	-8388608	8388607	NULL	34	true
+test/test_data/bdf_plus_example.bdf	12	BDF Annotations	NULL	NULL	-1.0	1.0	-8388608	8388607	NULL	NULL	true
 
 statement ok
 FROM read_edf_signal_headers('test/test_data/**');
