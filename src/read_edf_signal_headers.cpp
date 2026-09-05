@@ -77,15 +77,15 @@ unique_ptr<LocalTableFunctionState> ReadEDFSignalHeadersLocalInit(ExecutionConte
 
 void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	auto &global_state = data.global_state->Cast<ReadEDFSignalHeadersGlobalState>();
-	auto &bind_data = data.bind_data->Cast<ReadEDFSignalHeadersBindData>();
 
-	idx_t start_idx, end_idx;
-	if (!global_state.GetWorkItem(start_idx, end_idx)) {
+	idx_t file_idx;
+	if (!global_state.GetWorkItem(file_idx)) {
 		output.SetCardinality(0);
 		return;
 	}
 
-	idx_t count = end_idx - start_idx;
+	auto &bind_data = data.bind_data->Cast<ReadEDFSignalHeadersBindData>();
+	auto &fs = FileSystem::GetFileSystem(context);
 
 	auto &filename_vector = output.data[0];
 	auto &signal_id_vector = output.data[1];
@@ -101,58 +101,59 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 	auto &is_annotation_vector = output.data[11];
 
 	auto filename_data = FlatVector::GetData<string_t>(filename_vector);
+	auto signal_id_data = FlatVector::GetData<uint32_t>(signal_id_vector);
 	auto label_data = FlatVector::GetData<string_t>(label_vector);
 	auto transducer_type_data = FlatVector::GetData<string_t>(transducer_type_vector);
 	auto physical_dim_data = FlatVector::GetData<string_t>(physical_dim_vector);
+
+	auto physical_min_data = FlatVector::GetData<float>(physical_min_vector);
+	auto physical_max_data = FlatVector::GetData<float>(physical_max_vector);
+
+	auto digital_min_data = FlatVector::GetData<int32_t>(digital_min_vector);
+	auto digital_max_data = FlatVector::GetData<int32_t>(digital_max_vector);
+
 	auto prefiltering_data = FlatVector::GetData<string_t>(prefiltering_vector);
+	auto samples_per_record_data = FlatVector::GetData<uint32_t>(samples_per_record_vector);
+	auto is_annotation_data = FlatVector::GetData<bool>(is_annotation_vector);
 
-	auto &fs = FileSystem::GetFileSystem(context);
-
-	idx_t actual_count = 0;
-	idx_t num_signals_acc = 0;
-	for (idx_t i = 0; i < count; i++) {
-		idx_t file_index = start_idx + i;
-
-		auto filename = bind_data.files[file_index].path;
-		auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
-		auto signal_headers = BiosignalsEDFParser::ParseSignalHeaders(*file_handle);
+	auto filename = bind_data.files[file_idx].path;
+	auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
+	auto global_header = BiosignalsEDFParser::ParseGlobalHeader(*file_handle);
+	if (global_header.num_signals > STANDARD_VECTOR_SIZE) {
+		throw IOException("Cannot parse EDF file with " + to_string(global_header.num_signals) + " signals " + filename);
 		file_handle->Close();
-		size_t num_signals = signal_headers.size();
+	}
+	auto signal_headers = BiosignalsEDFParser::ParseSignalHeaders(*file_handle, global_header);
+	file_handle->Close();
+	size_t num_signals = signal_headers.size();
 
-		for (idx_t j = 0; j < num_signals; j++) {
-			idx_t idx_eff = num_signals_acc + j;
+	for (idx_t i = 0; i < num_signals; i++) {
+		filename_data[i] = StringVector::AddString(filename_vector, filename);
 
-			filename_data[idx_eff] = StringVector::AddString(filename_vector, filename);
+		signal_id_data[i] = i + 1;
 
-			signal_id_vector.SetValue(idx_eff, Value::UINTEGER(j + 1));
+		SetEmptyStringFieldToNull(signal_headers[i].label, label_vector, label_data, i);
+		SetEmptyStringFieldToNull(signal_headers[i].transducer_type, transducer_type_vector, transducer_type_data, i);
+		SetEmptyStringFieldToNull(signal_headers[i].physical_dim, physical_dim_vector, physical_dim_data, i);
 
-			SetEmptyStringFieldToNull(signal_headers[j].label, label_vector, label_data, idx_eff);
-			SetEmptyStringFieldToNull(signal_headers[j].transducer_type, transducer_type_vector, transducer_type_data,
-			                          idx_eff);
-			SetEmptyStringFieldToNull(signal_headers[j].physical_dim, physical_dim_vector, physical_dim_data, idx_eff);
+		physical_min_data[i] = signal_headers[i].physical_min;
+		physical_max_data[i] = signal_headers[i].physical_max;
 
-			physical_min_vector.SetValue(idx_eff, Value::FLOAT(signal_headers[j].physical_min));
-			physical_max_vector.SetValue(idx_eff, Value::FLOAT(signal_headers[j].physical_max));
+		digital_min_data[i] = signal_headers[i].digital_min;
+		digital_max_data[i] = signal_headers[i].digital_max;
 
-			digital_min_vector.SetValue(idx_eff, Value::INTEGER(signal_headers[j].digital_min));
-			digital_max_vector.SetValue(idx_eff, Value::INTEGER(signal_headers[j].digital_max));
+		SetEmptyStringFieldToNull(signal_headers[i].prefiltering, prefiltering_vector, prefiltering_data, i);
 
-			SetEmptyStringFieldToNull(signal_headers[j].prefiltering, prefiltering_vector, prefiltering_data, idx_eff);
-
-			if (signal_headers[j].is_annotation) {
-				samples_per_record_vector.SetValue(idx_eff, Value(nullptr));
-			} else {
-				samples_per_record_vector.SetValue(idx_eff, Value::UINTEGER(signal_headers[j].samples_per_record));
-			}
-
-			is_annotation_vector.SetValue(idx_eff, Value::BOOLEAN(signal_headers[j].is_annotation));
-
-			actual_count += 1;
+		if (signal_headers[i].is_annotation) {
+			FlatVector::SetNull(samples_per_record_vector, i, true);
+		} else {
+			samples_per_record_data[i] = signal_headers[i].samples_per_record;
 		}
-		num_signals_acc += num_signals;
+
+		is_annotation_data[i] = signal_headers[i].is_annotation;
 	}
 
-	output.SetCardinality(actual_count);
+	output.SetCardinality(num_signals);
 }
 
 unique_ptr<NodeStatistics> ReadEDFSignalHeadersCardinality(ClientContext &context, const FunctionData *bind_data_p) {

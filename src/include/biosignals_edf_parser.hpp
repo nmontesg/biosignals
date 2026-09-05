@@ -7,6 +7,7 @@
 
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "duckdb/common/file_system.hpp"
+#include "duckdb/common/vector.hpp"
 
 #define EDF_PLUS_CONTINUOUS    "EDF+C"
 #define EDF_PLUS_DISCONTINUOUS "EDF+D"
@@ -177,7 +178,17 @@ public:
 
 	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(FileHandle &, const EDFGlobalHeader &);
 	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(FileHandle &);
+
+	static vector<EDFSignalHeader> ParseSignalHeaders(FileHandle &, const EDFGlobalHeader &);
 	static vector<EDFSignalHeader> ParseSignalHeaders(FileHandle &);
+
+	static size_t GetTotalHeaderSize(const size_t);
+
+	template <size_t S>
+	static size_t GetRecordSize(const vector<EDFSignalHeader> &);
+
+	template <size_t S>
+	static idx_t GetSignalOffsetWithinRecord(const idx_t, const vector<EDFSignalHeader> &);
 };
 
 } // namespace duckdb

@@ -38,7 +38,7 @@ unique_ptr<FunctionData> ReadEDFGlobalHeaderFuncBind(ClientContext &context, Tab
 	return_types.push_back(LogicalType::VARCHAR);
 
 	names.push_back("start_datetime");
-	return_types.push_back(LogicalType::TIMESTAMP_S);
+	return_types.push_back(LogicalType::TIMESTAMP);
 
 	names.push_back("num_records");
 	return_types.push_back(LogicalType::INTEGER);
@@ -66,7 +66,7 @@ unique_ptr<LocalTableFunctionState> ReadEDFGlobalHeaderLocalInit(ExecutionContex
 
 void SetEmptyStringFieldToNull(const string &hdr_field, Vector &vector, string_t *data, const idx_t idx) {
 	if (hdr_field.empty()) {
-		vector.SetValue(idx, Value(nullptr));
+		FlatVector::SetNull(vector, idx, true);
 	} else {
 		data[idx] = StringVector::AddString(vector, hdr_field);
 	}
@@ -98,10 +98,13 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 	auto version_data = FlatVector::GetData<string_t>(version_vector);
 	auto patient_id_data = FlatVector::GetData<string_t>(patient_id_vector);
 	auto recording_id_data = FlatVector::GetData<string_t>(recording_id_vector);
+	auto start_datetime_data = FlatVector::GetData<timestamp_t>(start_datetime_vector);
+	auto num_records_data = FlatVector::GetData<int32_t>(num_records_vector);
+	auto duration_data = FlatVector::GetData<float>(duration_vector);
+	auto num_signals_data = FlatVector::GetData<int32_t>(num_signals_vector);
 
 	auto &fs = FileSystem::GetFileSystem(context);
 
-	idx_t actual_count = 0;
 	for (idx_t i = 0; i < count; i++) {
 		idx_t file_index = start_idx + i;
 
@@ -126,19 +129,13 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 		SetEmptyStringFieldToNull(global_header.patient_id, patient_id_vector, patient_id_data, i);
 		SetEmptyStringFieldToNull(global_header.recording_id, recording_id_vector, recording_id_data, i);
 
-		// num_records, duration, num_signals columns
-		num_records_vector.SetValue(i, Value::INTEGER(global_header.num_records));
-		duration_vector.SetValue(i, Value::FLOAT(global_header.duration_record));
-		num_signals_vector.SetValue(i, Value::INTEGER(global_header.num_signals));
-
-		// start_datetime column
-		timestamp_t start_timestamp = Timestamp::FromString(global_header.GetFormattedStartTimestamp(), false);
-		start_datetime_vector.SetValue(i, Value::TIMESTAMP(start_timestamp));
-
-		actual_count += 1;
+		start_datetime_data[i] = Timestamp::FromString(global_header.GetFormattedStartTimestamp(), false);
+		num_records_data[i] = global_header.num_records;
+		duration_data[i] = global_header.duration_record;
+		num_signals_data[i] = global_header.num_signals;
 	}
 
-	output.SetCardinality(actual_count);
+	output.SetCardinality(count);
 }
 
 unique_ptr<NodeStatistics> ReadEDFGlobalHeaderCardinality(ClientContext &context, const FunctionData *bind_data_p) {

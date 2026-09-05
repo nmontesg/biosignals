@@ -154,8 +154,7 @@ vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle
 	return BiosignalsEDFParser::ParseRawSignalHeaders(fh, global_hdr);
 }
 
-vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh) {
-	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
+vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh, const EDFGlobalHeader &global_hdr) {
 	vector<RawEDFSignalHeader> raw_signal_hdrs = BiosignalsEDFParser::ParseRawSignalHeaders(fh, global_hdr);
 	size_t num_hdrs = raw_signal_hdrs.size();
 	vector<EDFSignalHeader> signal_hdrs(num_hdrs);
@@ -190,6 +189,37 @@ vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh) 
 	}
 
 	return signal_hdrs;
+}
+
+vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh) {
+	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
+	return BiosignalsEDFParser::ParseSignalHeaders(fh, global_hdr);
+}
+
+size_t BiosignalsEDFParser::GetTotalHeaderSize(const size_t n_signals) {
+	// there are 10 fields in RawEDFGlobalHeader
+	// there are 10 fields in RawEDFSignalHeader
+	return sizeof(RawEDFGlobalHeader) - 10 + n_signals * (sizeof(RawEDFSignalHeader) - 10);
+}
+
+template <size_t S>
+size_t BiosignalsEDFParser::GetRecordSize(const vector<EDFSignalHeader> &signal_hdrs) {
+	size_t record_sz = 0;
+	for (const EDFSignalHeader &hdr : signal_hdrs) {
+		record_sz += (hdr.is_annotation ? hdr.samples_per_record : S * hdr.samples_per_record);
+	}
+	return record_sz;
+}
+
+template <size_t S>
+idx_t BiosignalsEDFParser::GetSignalOffsetWithinRecord(const idx_t signal_idx,
+                                                       const vector<EDFSignalHeader> &signal_hrs) {
+	idx_t offset = 0;
+	for (idx_t i; i < signal_idx; i++) {
+		const EDFSignalHeader &hdr = signal_hrs[i];
+		offset += (hdr.is_annotation ? hdr.samples_per_record : S * hdr.samples_per_record);
+	}
+	return offset;
 }
 
 } // namespace duckdb
