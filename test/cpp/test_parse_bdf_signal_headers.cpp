@@ -1,12 +1,10 @@
 #include "biosignals_edf_parser.hpp"
 #include "biosignals_test_utils.hpp"
-#include "duckdb/common/file_system.hpp"
 
 int main(int argc, char *argv[]) {
-	std::unique_ptr<duckdb::FileSystem> fs = duckdb::FileSystem::CreateLocal();
-	std::unique_ptr<duckdb::FileHandle> fh = fs->OpenFile(argv[1], duckdb::FileOpenFlags::FILE_FLAGS_READ);
-	std::vector<duckdb::EDFSignalHeader> headers = duckdb::BiosignalsEDFParser::ParseSignalHeaders(*fh);
-	fh->Close();
+	duckdb::DuckDB db(":memory");
+	duckdb::unique_ptr<duckdb::CachingFileHandle> fh = BiosignalsTestUtils::GetCachingFileHandle(db, argv[1]);
+	std::vector<duckdb::EDFSignalHeader> headers = duckdb::BiosignalsEDFParser::ParseSignalHeaders(fh);
 
 	std::vector<duckdb::EDFSignalHeader> expected_headers = {
 	    duckdb::EDFSignalHeader("A1", "Active Electrode, pin type", "uV", -262144.0, 262144.0, -8388608, 8388607,

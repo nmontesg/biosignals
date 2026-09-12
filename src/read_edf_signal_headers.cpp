@@ -8,7 +8,7 @@
 namespace duckdb {
 
 unique_ptr<FunctionData> ReadEDFSignalHeadersFuncBind(ClientContext &context, TableFunctionBindInput &input,
-                                                      vector<LogicalType> &return_types, vector<string> &names) {
+                                                      vector<LogicalType> &return_types, vector<Identifier> &names) {
 	if (input.inputs.empty()) {
 		throw InvalidInputException("read_edf_signal_headers requires at least one argument.");
 	}
@@ -80,12 +80,12 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 
 	idx_t file_idx;
 	if (!global_state.GetWorkItem(file_idx)) {
-		output.SetCardinality(0);
+		output.SetChildCardinality(0);
 		return;
 	}
 
 	auto &bind_data = data.bind_data->Cast<ReadEDFSignalHeadersBindData>();
-	auto &fs = FileSystem::GetFileSystem(context);
+	auto fs = CachingFileSystem::Get(context);
 
 	auto &filename_vector = output.data[0];
 	auto &signal_id_vector = output.data[1];
@@ -100,31 +100,30 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 	auto &samples_per_record_vector = output.data[10];
 	auto &is_annotation_vector = output.data[11];
 
-	auto filename_data = FlatVector::GetData<string_t>(filename_vector);
-	auto signal_id_data = FlatVector::GetData<uint32_t>(signal_id_vector);
-	auto label_data = FlatVector::GetData<string_t>(label_vector);
-	auto transducer_type_data = FlatVector::GetData<string_t>(transducer_type_vector);
-	auto physical_dim_data = FlatVector::GetData<string_t>(physical_dim_vector);
+	auto filename_data = FlatVector::GetDataMutable<string_t>(filename_vector);
+	auto signal_id_data = FlatVector::GetDataMutable<uint32_t>(signal_id_vector);
+	auto label_data = FlatVector::GetDataMutable<string_t>(label_vector);
+	auto transducer_type_data = FlatVector::GetDataMutable<string_t>(transducer_type_vector);
+	auto physical_dim_data = FlatVector::GetDataMutable<string_t>(physical_dim_vector);
 
-	auto physical_min_data = FlatVector::GetData<float>(physical_min_vector);
-	auto physical_max_data = FlatVector::GetData<float>(physical_max_vector);
+	auto physical_min_data = FlatVector::GetDataMutable<float>(physical_min_vector);
+	auto physical_max_data = FlatVector::GetDataMutable<float>(physical_max_vector);
 
-	auto digital_min_data = FlatVector::GetData<int32_t>(digital_min_vector);
-	auto digital_max_data = FlatVector::GetData<int32_t>(digital_max_vector);
+	auto digital_min_data = FlatVector::GetDataMutable<int32_t>(digital_min_vector);
+	auto digital_max_data = FlatVector::GetDataMutable<int32_t>(digital_max_vector);
 
-	auto prefiltering_data = FlatVector::GetData<string_t>(prefiltering_vector);
-	auto samples_per_record_data = FlatVector::GetData<uint32_t>(samples_per_record_vector);
-	auto is_annotation_data = FlatVector::GetData<bool>(is_annotation_vector);
+	auto prefiltering_data = FlatVector::GetDataMutable<string_t>(prefiltering_vector);
+	auto samples_per_record_data = FlatVector::GetDataMutable<uint32_t>(samples_per_record_vector);
+	auto is_annotation_data = FlatVector::GetDataMutable<bool>(is_annotation_vector);
 
 	auto filename = bind_data.files[file_idx].path;
 	auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
-	auto global_header = BiosignalsEDFParser::ParseGlobalHeader(*file_handle);
+	auto global_header = BiosignalsEDFParser::ParseGlobalHeader(file_handle);
 	if (global_header.num_signals > STANDARD_VECTOR_SIZE) {
-		throw IOException("Cannot parse EDF file with " + to_string(global_header.num_signals) + " signals " + filename);
-		file_handle->Close();
+		throw IOException("Cannot parse EDF file with " + to_string(global_header.num_signals) + " signals " +
+		                  filename);
 	}
-	auto signal_headers = BiosignalsEDFParser::ParseSignalHeaders(*file_handle, global_header);
-	file_handle->Close();
+	auto signal_headers = BiosignalsEDFParser::ParseSignalHeaders(file_handle, global_header);
 	size_t num_signals = signal_headers.size();
 
 	for (idx_t i = 0; i < num_signals; i++) {
@@ -153,7 +152,7 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 		is_annotation_data[i] = signal_headers[i].is_annotation;
 	}
 
-	output.SetCardinality(num_signals);
+	output.SetChildCardinality(num_signals);
 }
 
 unique_ptr<NodeStatistics> ReadEDFSignalHeadersCardinality(ClientContext &context, const FunctionData *bind_data_p) {
@@ -166,9 +165,10 @@ double ReadEDFSignalHeadersProgress(ClientContext &context, const FunctionData *
 }
 
 void RegisterReadEDFSignalHeaders(ExtensionLoader &loader) {
-	TableFunction read_edf_signal_headers_func("read_edf_signal_headers", {LogicalType::VARCHAR},
+	TableFunction read_edf_signal_headers_func(Identifier("read_edf_signal_headers"), {LogicalType::VARCHAR},
 	                                           ReadEDFSignalHeadersFunc, ReadEDFSignalHeadersFuncBind,
 	                                           ReadEDFSignalHeadersGlobalInit, ReadEDFSignalHeadersLocalInit);
+	read_edf_signal_headers_func.order_preservation_type = OrderPreservationType::NO_ORDER;
 
 	CreateTableFunctionInfo read_edf_signal_headers_info(read_edf_signal_headers_func);
 	FunctionDescription read_edf_signal_headers_desc;

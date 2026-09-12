@@ -1,12 +1,13 @@
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "biosignals_edf_parser.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
+#include "duckdb/storage/external_file_cache/caching_file_system.hpp"
 #include "read_edf_global_header.hpp"
 
 namespace duckdb {
 
 unique_ptr<FunctionData> ReadEDFGlobalHeaderFuncBind(ClientContext &context, TableFunctionBindInput &input,
-                                                     vector<LogicalType> &return_types, vector<string> &names) {
+                                                     vector<LogicalType> &return_types, vector<Identifier> &names) {
 	if (input.inputs.empty()) {
 		throw InvalidInputException("read_edf_global_header requires at least one argument.");
 	}
@@ -78,7 +79,7 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 
 	idx_t start_idx, end_idx;
 	if (!global_state.GetWorkItem(start_idx, end_idx)) {
-		output.SetCardinality(0);
+		output.SetChildCardinality(0);
 		return;
 	}
 
@@ -93,17 +94,17 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 	auto &duration_vector = output.data[7];
 	auto &num_signals_vector = output.data[8];
 
-	auto filename_data = FlatVector::GetData<string_t>(filename_vector);
-	auto format_data = FlatVector::GetData<string_t>(format_vector);
-	auto version_data = FlatVector::GetData<string_t>(version_vector);
-	auto patient_id_data = FlatVector::GetData<string_t>(patient_id_vector);
-	auto recording_id_data = FlatVector::GetData<string_t>(recording_id_vector);
-	auto start_datetime_data = FlatVector::GetData<timestamp_t>(start_datetime_vector);
-	auto num_records_data = FlatVector::GetData<int32_t>(num_records_vector);
-	auto duration_data = FlatVector::GetData<float>(duration_vector);
-	auto num_signals_data = FlatVector::GetData<int32_t>(num_signals_vector);
+	auto filename_data = FlatVector::GetDataMutable<string_t>(filename_vector);
+	auto format_data = FlatVector::GetDataMutable<string_t>(format_vector);
+	auto version_data = FlatVector::GetDataMutable<string_t>(version_vector);
+	auto patient_id_data = FlatVector::GetDataMutable<string_t>(patient_id_vector);
+	auto recording_id_data = FlatVector::GetDataMutable<string_t>(recording_id_vector);
+	auto start_datetime_data = FlatVector::GetDataMutable<timestamp_t>(start_datetime_vector);
+	auto num_records_data = FlatVector::GetDataMutable<int32_t>(num_records_vector);
+	auto duration_data = FlatVector::GetDataMutable<float>(duration_vector);
+	auto num_signals_data = FlatVector::GetDataMutable<int32_t>(num_signals_vector);
 
-	auto &fs = FileSystem::GetFileSystem(context);
+	auto fs = CachingFileSystem::Get(context);
 
 	for (idx_t i = 0; i < count; i++) {
 		idx_t file_index = start_idx + i;
@@ -113,8 +114,7 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 		filename_data[i] = StringVector::AddString(filename_vector, filename);
 
 		auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
-		auto global_header = BiosignalsEDFParser::ParseGlobalHeader(*file_handle);
-		file_handle->Close();
+		auto global_header = BiosignalsEDFParser::ParseGlobalHeader(file_handle);
 
 		// format column
 		string format_value =
@@ -135,7 +135,7 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 		num_signals_data[i] = global_header.num_signals;
 	}
 
-	output.SetCardinality(count);
+	output.SetChildCardinality(count);
 }
 
 unique_ptr<NodeStatistics> ReadEDFGlobalHeaderCardinality(ClientContext &context, const FunctionData *bind_data_p) {
@@ -156,9 +156,10 @@ double ReadEDFGlobalHeaderProgress(ClientContext &context, const FunctionData *b
 }
 
 void RegisterReadEDFGlobalHeader(ExtensionLoader &loader) {
-	TableFunction read_edf_global_header_func("read_edf_global_header", {LogicalType::VARCHAR}, ReadEDFGlobalHeaderFunc,
-	                                          ReadEDFGlobalHeaderFuncBind, ReadEDFGlobalHeaderGlobalInit,
-	                                          ReadEDFGlobalHeaderLocalInit);
+	TableFunction read_edf_global_header_func(Identifier("read_edf_global_header"), {LogicalType::VARCHAR},
+	                                          ReadEDFGlobalHeaderFunc, ReadEDFGlobalHeaderFuncBind,
+	                                          ReadEDFGlobalHeaderGlobalInit, ReadEDFGlobalHeaderLocalInit);
+	read_edf_global_header_func.order_preservation_type = OrderPreservationType::NO_ORDER;
 
 	CreateTableFunctionInfo read_edf_global_header_info(read_edf_global_header_func);
 	FunctionDescription read_edf_global_header_desc;

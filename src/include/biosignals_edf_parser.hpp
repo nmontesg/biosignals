@@ -6,8 +6,12 @@
 #include <string>
 
 #include "duckdb.hpp" // IWYU pragma: keep
-#include "duckdb/common/file_system.hpp"
+#include "duckdb/common/unique_ptr.hpp"
 #include "duckdb/common/vector.hpp"
+#include "duckdb/storage/external_file_cache/caching_file_system.hpp"
+
+#define GLOBAL_HEADER_SIZE 256
+#define SIGNAL_HEADER_SIZE 256
 
 #define EDF_PLUS_CONTINUOUS    "EDF+C"
 #define EDF_PLUS_DISCONTINUOUS "EDF+D"
@@ -104,10 +108,10 @@ struct RawEDFSignalHeader {
 	};
 };
 
-#define PARSE_EDF_FIELD(FH, OFFSET, NUM_SIGNALS, SIGNAL_HEADERS, FIELD)                                                \
+#define PARSE_EDF_FIELD(BUF, OFFSET, NUM_SIGNALS, SIGNAL_HEADERS, FIELD)                                               \
 	for (idx_t i = 0; i < NUM_SIGNALS; i++) {                                                                          \
-		BiosignalsEDFParser::ParseFieldFromFile(FH, OFFSET, sizeof(RawEDFSignalHeader::FIELD) - 1,                     \
-		                                        SIGNAL_HEADERS[i].FIELD);                                              \
+		BiosignalsEDFParser::ParseFieldFromBuffer(BUF, OFFSET, sizeof(RawEDFSignalHeader::FIELD) - 1,                  \
+		                                          SIGNAL_HEADERS[i].FIELD);                                            \
 	}
 
 struct EDFSignalHeader {
@@ -164,7 +168,7 @@ struct EDFSignalHeader {
 
 class BiosignalsEDFParser {
 private:
-	static void ParseFieldFromFile(FileHandle &, idx_t &, size_t, char *);
+	static void ParseFieldFromBuffer(char *, idx_t &, size_t, char *);
 
 	template <typename T>
 	static void ParseFieldFromRawHeader(const char *, T &);
@@ -173,14 +177,14 @@ private:
 	static bool CheckBDFVersion(const char *);
 
 public:
-	static RawEDFGlobalHeader ParseRawGlobalHeader(FileHandle &);
-	static EDFGlobalHeader ParseGlobalHeader(FileHandle &);
+	static RawEDFGlobalHeader ParseRawGlobalHeader(unique_ptr<CachingFileHandle> &);
+	static EDFGlobalHeader ParseGlobalHeader(unique_ptr<CachingFileHandle> &);
 
-	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(FileHandle &, const EDFGlobalHeader &);
-	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(FileHandle &);
+	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(unique_ptr<CachingFileHandle> &, const EDFGlobalHeader &);
+	static vector<RawEDFSignalHeader> ParseRawSignalHeaders(unique_ptr<CachingFileHandle> &);
 
-	static vector<EDFSignalHeader> ParseSignalHeaders(FileHandle &, const EDFGlobalHeader &);
-	static vector<EDFSignalHeader> ParseSignalHeaders(FileHandle &);
+	static vector<EDFSignalHeader> ParseSignalHeaders(unique_ptr<CachingFileHandle> &, const EDFGlobalHeader &);
+	static vector<EDFSignalHeader> ParseSignalHeaders(unique_ptr<CachingFileHandle> &);
 
 	static size_t GetTotalHeaderSize(const size_t);
 

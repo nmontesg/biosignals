@@ -3,6 +3,15 @@
 #include <stdexcept>
 #include "biosignals_test_utils.hpp"
 
+duckdb::unique_ptr<duckdb::CachingFileHandle> BiosignalsTestUtils::GetCachingFileHandle(duckdb::DuckDB &db,
+                                                                                        const char *fp) {
+	duckdb::shared_ptr<duckdb::DatabaseInstance> db_instance = db.instance;
+	duckdb::FileSystem &fs = db_instance->GetFileSystem();
+	duckdb::CachingFileSystem caching_fs(fs, *db_instance);
+	std::string open_fp(fp);
+	return caching_fs.OpenFile(open_fp, duckdb::FileOpenFlags::FILE_FLAGS_READ);
+}
+
 void BiosignalsTestUtils::AssertStringEquals(const char *actual, const char *expected) {
 	if (std::strcmp(actual, expected) != 0) {
 		std::ostringstream oss;

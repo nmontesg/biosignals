@@ -41,6 +41,7 @@ SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.bd
 ----
 2
 
+
 # ===================== read_edf_signal_headers =====================
 
 statement ok

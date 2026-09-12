@@ -3,34 +3,41 @@
 #include "boost/algorithm/string/trim.hpp"
 #include "boost/lexical_cast.hpp"
 #include "duckdb/common/exception.hpp"
-#include "duckdb/common/file_system.hpp"
 #include "duckdb/common/vector.hpp"
+#include "duckdb/storage/external_file_cache/caching_file_system.hpp"
 
 namespace duckdb {
 
-void BiosignalsEDFParser::ParseFieldFromFile(FileHandle &fh, idx_t &offset, size_t num_bytes, char *buffer) {
-	fh.Seek(offset);
-	fh.Read(buffer, num_bytes);
-	buffer[num_bytes] = '\0';
+void BiosignalsEDFParser::ParseFieldFromBuffer(char *buf, idx_t &offset, size_t num_bytes, char *dest) {
+	memcpy(dest, buf + offset, num_bytes);
+	dest[num_bytes] = '\0';
 	offset += num_bytes;
 }
 
-RawEDFGlobalHeader BiosignalsEDFParser::ParseRawGlobalHeader(FileHandle &fh) {
+RawEDFGlobalHeader BiosignalsEDFParser::ParseRawGlobalHeader(unique_ptr<CachingFileHandle> &fh) {
 	RawEDFGlobalHeader raw_header;
+	char buffer[GLOBAL_HEADER_SIZE];
 	idx_t offset = 0;
+	fh->Seek(offset);
+	idx_t nr_bytes = GLOBAL_HEADER_SIZE;
+	FileBufferHandleGroup fh_group = fh->Read(nr_bytes);
+	fh_group.CopyTo(data_ptr_cast(buffer), nr_bytes);
 
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.version) - 1, raw_header.version);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.patient_id) - 1, raw_header.patient_id);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.recording_id) - 1, raw_header.recording_id);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.start_date) - 1, raw_header.start_date);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.start_time) - 1, raw_header.start_time);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_header_bytes) - 1,
-	                                        raw_header.num_header_bytes);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.reserved) - 1, raw_header.reserved);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_records) - 1, raw_header.num_records);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.duration_record) - 1,
-	                                        raw_header.duration_record);
-	BiosignalsEDFParser::ParseFieldFromFile(fh, offset, sizeof(raw_header.num_signals) - 1, raw_header.num_signals);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.version) - 1, raw_header.version);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.patient_id) - 1, raw_header.patient_id);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.recording_id) - 1,
+	                                          raw_header.recording_id);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.start_date) - 1, raw_header.start_date);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.start_time) - 1, raw_header.start_time);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.num_header_bytes) - 1,
+	                                          raw_header.num_header_bytes);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.reserved) - 1, raw_header.reserved);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.num_records) - 1,
+	                                          raw_header.num_records);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.duration_record) - 1,
+	                                          raw_header.duration_record);
+	BiosignalsEDFParser::ParseFieldFromBuffer(buffer, offset, sizeof(raw_header.num_signals) - 1,
+	                                          raw_header.num_signals);
 
 	return raw_header;
 }
@@ -76,7 +83,7 @@ bool BiosignalsEDFParser::CheckBDFVersion(const char *hdr_version) {
 	return std::memcmp(hdr_version, expected_bdf_version, 8) == 0;
 }
 
-EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
+EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(unique_ptr<CachingFileHandle> &fh) {
 	RawEDFGlobalHeader raw_header = ParseRawGlobalHeader(fh);
 	EDFGlobalHeader header;
 
@@ -124,7 +131,7 @@ EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(FileHandle &fh) {
 	return header;
 }
 
-vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle &fh,
+vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(unique_ptr<CachingFileHandle> &fh,
                                                                       const EDFGlobalHeader &global_hdr) {
 	int num_signals = global_hdr.num_signals;
 	if (num_signals <= 0) {
@@ -133,28 +140,39 @@ vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle
 	}
 
 	vector<RawEDFSignalHeader> signal_headers(num_signals);
-	idx_t offset = sizeof(RawEDFGlobalHeader) - 10; // 10 is the number of fields in RawEDFGlobalHeader
 
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, label);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, transducer_type);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_dim);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_min);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, physical_max);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, digital_min);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, digital_max);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, prefiltering);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, samples_per_record);
-	PARSE_EDF_FIELD(fh, offset, num_signals, signal_headers, reserved);
+	idx_t nr_bytes = (size_t)num_signals * SIGNAL_HEADER_SIZE;
+	vector<char> buffer(nr_bytes);
+
+	idx_t file_offset = GLOBAL_HEADER_SIZE;
+	fh->Seek(file_offset);
+
+	FileBufferHandleGroup fh_group = fh->Read(nr_bytes, file_offset);
+	fh_group.CopyTo(data_ptr_cast(buffer.data()), nr_bytes);
+
+	idx_t buf_offset = 0;
+
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, label);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, transducer_type);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, physical_dim);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, physical_min);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, physical_max);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, digital_min);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, digital_max);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, prefiltering);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, samples_per_record);
+	PARSE_EDF_FIELD(buffer.data(), buf_offset, num_signals, signal_headers, reserved);
 
 	return signal_headers;
 }
 
-vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(FileHandle &fh) {
+vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(unique_ptr<CachingFileHandle> &fh) {
 	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
 	return BiosignalsEDFParser::ParseRawSignalHeaders(fh, global_hdr);
 }
 
-vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh, const EDFGlobalHeader &global_hdr) {
+vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(unique_ptr<CachingFileHandle> &fh,
+                                                                const EDFGlobalHeader &global_hdr) {
 	vector<RawEDFSignalHeader> raw_signal_hdrs = BiosignalsEDFParser::ParseRawSignalHeaders(fh, global_hdr);
 	size_t num_hdrs = raw_signal_hdrs.size();
 	vector<EDFSignalHeader> signal_hdrs(num_hdrs);
@@ -191,14 +209,12 @@ vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh, 
 	return signal_hdrs;
 }
 
-vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(FileHandle &fh) {
+vector<EDFSignalHeader> BiosignalsEDFParser::ParseSignalHeaders(unique_ptr<CachingFileHandle> &fh) {
 	EDFGlobalHeader global_hdr = BiosignalsEDFParser::ParseGlobalHeader(fh);
 	return BiosignalsEDFParser::ParseSignalHeaders(fh, global_hdr);
 }
 
 size_t BiosignalsEDFParser::GetTotalHeaderSize(const size_t n_signals) {
-	// there are 10 fields in RawEDFGlobalHeader
-	// there are 10 fields in RawEDFSignalHeader
 	return sizeof(RawEDFGlobalHeader) - 10 + n_signals * (sizeof(RawEDFSignalHeader) - 10);
 }
 

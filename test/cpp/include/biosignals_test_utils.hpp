@@ -1,11 +1,14 @@
 #pragma once
 
 #include "biosignals_edf_parser.hpp"
+#include "duckdb/main/database.hpp"
 #include <sstream>
 #include <string>
 
 class BiosignalsTestUtils {
 public:
+	static duckdb::unique_ptr<duckdb::CachingFileHandle> GetCachingFileHandle(duckdb::DuckDB &, const char *);
+
 	static void AssertStringEquals(const char *, const char *);
 	static void AssertStringEquals(const std::string &, const std::string &);
 

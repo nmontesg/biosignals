@@ -8,7 +8,7 @@ namespace duckdb {
 struct ReadEDFSignalHeadersBindData : public ReadEDFGlobalHeaderBindData {};
 
 unique_ptr<FunctionData> ReadEDFSignalHeadersFuncBind(ClientContext &, TableFunctionBindInput &, vector<LogicalType> &,
-                                                      vector<string> &);
+                                                      vector<Identifier> &);
 
 struct ReadEDFSignalHeadersGlobalState : public ReadEDFGlobalHeaderGlobalState {
 	explicit ReadEDFSignalHeadersGlobalState(int64_t total_files) : ReadEDFGlobalHeaderGlobalState(total_files) {};

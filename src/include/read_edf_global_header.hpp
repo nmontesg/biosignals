@@ -9,7 +9,7 @@ struct ReadEDFGlobalHeaderBindData : public TableFunctionData {
 };
 
 unique_ptr<FunctionData> ReadEDFGlobalHeaderFuncBind(ClientContext &, TableFunctionBindInput &, vector<LogicalType> &,
-                                                     vector<string> &);
+                                                     vector<Identifier> &);
 
 struct ReadEDFGlobalHeaderGlobalState : public GlobalTableFunctionState {
 	std::mutex mutex;
