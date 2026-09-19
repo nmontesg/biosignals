@@ -66,7 +66,7 @@ unique_ptr<FunctionData> ReadEDFSignalHeadersFuncBind(ClientContext &context, Ta
 unique_ptr<GlobalTableFunctionState> ReadEDFSignalHeadersGlobalInit(ClientContext &context,
                                                                     TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<ReadEDFSignalHeadersBindData>();
-	return make_uniq<ReadEDFSignalHeadersGlobalState>(bind_data.files.size());
+	return make_uniq<ReadEDFSignalHeadersGlobalState>(context, bind_data.files.size());
 }
 
 unique_ptr<LocalTableFunctionState> ReadEDFSignalHeadersLocalInit(ExecutionContext &context,
@@ -85,7 +85,6 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 	}
 
 	auto &bind_data = data.bind_data->Cast<ReadEDFSignalHeadersBindData>();
-	auto fs = CachingFileSystem::Get(context);
 
 	auto &filename_vector = output.data[0];
 	auto &signal_id_vector = output.data[1];
@@ -117,7 +116,7 @@ void ReadEDFSignalHeadersFunc(ClientContext &context, TableFunctionInput &data, 
 	auto is_annotation_data = FlatVector::GetDataMutable<bool>(is_annotation_vector);
 
 	auto filename = bind_data.files[file_idx].path;
-	auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
+	auto file_handle = global_state.filesystem.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
 	auto global_header = BiosignalsEDFParser::ParseGlobalHeader(file_handle);
 	if (global_header.num_signals > STANDARD_VECTOR_SIZE) {
 		throw IOException("Cannot parse EDF file with " + to_string(global_header.num_signals) + " signals " +

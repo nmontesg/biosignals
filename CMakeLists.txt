@@ -7,10 +7,15 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 
 project(${TARGET_NAME})
 
-set(CMAKE_CXX_STANDARD "17" CACHE STRING "C++ standard to enforce")
+set(CMAKE_CXX_STANDARD
+    "17"
+    CACHE STRING "C++ standard to enforce")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Boost COMPONENTS algorithm lexical_cast REQUIRED)
+find_package(
+  Boost
+  COMPONENTS algorithm endian lexical_cast
+  REQUIRED)
 if(Boost_FOUND)
   message(STATUS "Found Boost: ${Boost_INCLUDE_DIRS}")
   include_directories(${Boost_INCLUDE_DIRS})
@@ -22,19 +27,15 @@ if(GIT_FOUND)
     COMMAND ${GIT_EXECUTABLE} lfs pull
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_LFS_OUTPUT
-    ERROR_VARIABLE GIT_LFS_ERROR
-    ECHO_OUTPUT_VARIABLE
-    ECHO_ERROR_VARIABLE
-  )
+    ERROR_VARIABLE GIT_LFS_ERROR ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE)
 endif()
 
 include_directories(src/include)
 
 set(EXTENSION_SOURCES
-    src/biosignals_extension.cpp
-    src/biosignals_edf_parser.cpp
-    src/read_edf_global_header.cpp
-    src/read_edf_signal_headers.cpp)
+    src/biosignals_edf_parser.cpp src/biosignals_extension.cpp
+    src/read_edf_global_header.cpp src/read_edf_signal_headers.cpp
+    src/read_edf_signal.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})

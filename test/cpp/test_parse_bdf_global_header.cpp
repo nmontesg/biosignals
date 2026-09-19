@@ -11,9 +11,9 @@ int main(int argc, char *argv[]) {
 	expected_header.patient_id = "";
 	expected_header.recording_id = "";
 
-	expected_header.start_date_year = 2005;
+	expected_header.start_date_year = 2001;
 	expected_header.start_date_month = 11;
-	expected_header.start_date_day = 1;
+	expected_header.start_date_day = 5;
 
 	expected_header.start_time_hour = 19;
 	expected_header.start_time_minute = 37;

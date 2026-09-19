@@ -21,7 +21,7 @@ CREATE SECRET garage_secret (
 );
 
 
-# ===================== read_edf_global_header =====================
+# ========================================== read_edf_global_header ==========================================
 
 statement ok
 FROM read_edf_global_header('s3://biosignals-test/test_data/**');
@@ -29,12 +29,12 @@ FROM read_edf_global_header('s3://biosignals-test/test_data/**');
 query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/**');
 ----
-4
+8
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.edf');
 ----
-2
+6
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.bdf');
@@ -42,7 +42,7 @@ SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.bd
 2
 
 
-# ===================== read_edf_signal_headers =====================
+# ========================================== read_edf_signal_headers ==========================================
 
 statement ok
 FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
@@ -50,14 +50,45 @@ FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
 query I
 SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
 ----
-57
+71
 
 query I
 SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/*.edf');
 ----
-28
+42
 
 query I
 SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/*.bdf');
 ----
 29
+
+
+# ========================================== read_edf_signal ==========================================
+
+query IIIIIII
+FROM read_edf_signal('s3://biosignals-test/test_data/*Hypnogram.edf');
+----
+
+statement ok
+FROM read_edf_signal('s3://biosignals-test/test_data/*.edf');
+
+statement ok
+FROM read_edf_signal('s3://biosignals-test/test_data/*.bdf');
+
+statement ok
+FROM read_edf_signal('s3://biosignals-test/test_data/*');
+
+query I
+SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*.edf');
+----
+42299500
+
+query I
+SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*.bdf');
+----
+3408960
+
+query I
+SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*');
+----
+45708460

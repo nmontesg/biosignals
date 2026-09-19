@@ -14,7 +14,7 @@ Catalog Error: Table Function with name read_edf_signal_headers does not exist!
 
 require biosignals
 
-# ===================== read_edf_global_header =====================
+# ========================================== read_edf_global_header ==========================================
 
 # at least one argument needed
 statement error
@@ -24,22 +24,22 @@ FROM read_edf_global_header();
 query IIIIIIIII
 FROM read_edf_global_header('test/test_data/edf_example.edf');
 ----
-test/test_data/edf_example.edf	EDF	0	test file	EDF generator	2002-10-08 14:27:00	900	1.0	16
+test/test_data/edf_example.edf	EDF	0	test file	EDF generator	2008-10-02 14:27:00	900	1.0	16
 
 query IIIIIIIII
 FROM read_edf_global_header('test/test_data/edf_plus_example.edf');
 ----
-test/test_data/edf_plus_example.edf	EDF+C	0	X X X X	Startdate 10-DEC-2009 X X test_generator	2010-12-09 12:44:02	600	1.0	12
+test/test_data/edf_plus_example.edf	EDF+C	0	X X X X	Startdate 10-DEC-2009 X X test_generator	2009-12-10 12:44:02	600	1.0	12
 
 query IIIIIIIII
 FROM read_edf_global_header('test/test_data/bdf_example.bdf');
 ----
-test/test_data/bdf_example.bdf	BDF	BIOSEMI	NULL	NULL	2005-11-01 19:37:16	60	1.0	17
+test/test_data/bdf_example.bdf	BDF	BIOSEMI	NULL	NULL	2001-11-05 19:37:16	60	1.0	17
 
 query IIIIIIIII
 FROM read_edf_global_header('test/test_data/bdf_plus_example.bdf');
 ----
-test/test_data/bdf_plus_example.bdf	BDF+C	BIOSEMI	X X X X	Startdate 10-DEC-2009 X X test_generator	2010-12-09 12:45:54	600	1.0	12
+test/test_data/bdf_plus_example.bdf	BDF+C	BIOSEMI	X X X X	Startdate 10-DEC-2009 X X test_generator	2009-12-10 12:45:54	600	1.0	12
 
 statement ok
 FROM read_edf_global_header('test/test_data/**');
@@ -47,12 +47,12 @@ FROM read_edf_global_header('test/test_data/**');
 query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/**');
 ----
-4
+8
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.edf');
 ----
-2
+6
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.bdf');
@@ -60,7 +60,7 @@ SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.bdf');
 2
 
 
-# ===================== read_edf_signal_headers =====================
+# ========================================== read_edf_signal_headers ==========================================
 
 # at least one argument needed
 statement error
@@ -105,3 +105,75 @@ test/test_data/bdf_plus_example.bdf	12	BDF Annotations	NULL	NULL	-1.0	1.0	-83886
 
 statement ok
 FROM read_edf_signal_headers('test/test_data/**');
+
+
+# ========================================== read_edf_signal ==========================================
+
+query II
+SELECT signal_id, digital_signal FROM read_edf_signal('test/test_data/edf_example.edf') WHERE timestep = 0 ORDER BY signal_id;
+----
+1	-8192
+2	-8200
+3	-16384
+4	-10475
+5	0
+6	0
+7	0
+8	0
+9	0
+10	0
+11	0
+12	-8200
+13	0
+14	2730
+15	1638
+16	16384
+
+query II
+SELECT signal_id, digital_signal FROM read_edf_signal('test/test_data/bdf_example.bdf') WHERE timestep = 0 ORDER BY signal_id;
+----
+1	-20384
+2	-20384
+3	-5312
+4	-26048
+5	-16256
+6	-21952
+7	-20800
+8	256
+9	-4640
+10	-12512
+11	-12544
+12	-5600
+13	-6784
+14	-22208
+15	-19712
+16	-8384
+17	1900799
+
+query IIIIIII
+FROM read_edf_signal('test/test_data/*Hypnogram.edf');
+----
+
+statement ok
+FROM read_edf_signal('test/test_data/*.edf');
+
+statement ok
+FROM read_edf_signal('test/test_data/*.bdf');
+
+statement ok
+FROM read_edf_signal('test/test_data/*');
+
+query I
+SELECT COUNT(*) FROM read_edf_signal('test/test_data/*.edf');
+----
+42299500
+
+query I
+SELECT COUNT(*) FROM read_edf_signal('test/test_data/*.bdf');
+----
+3408960
+
+query I
+SELECT COUNT(*) FROM read_edf_signal('test/test_data/*');
+----
+45708460

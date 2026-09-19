@@ -1,10 +1,11 @@
 #pragma once
 
-#include <cfloat>
 #include <cstddef>
 #include <iomanip>
-#include <string>
+#include <numeric>
 
+#include "boost/algorithm/string/trim.hpp"
+#include "boost/lexical_cast.hpp"
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "duckdb/common/unique_ptr.hpp"
 #include "duckdb/common/vector.hpp"
@@ -110,8 +111,8 @@ struct RawEDFSignalHeader {
 
 #define PARSE_EDF_FIELD(BUF, OFFSET, NUM_SIGNALS, SIGNAL_HEADERS, FIELD)                                               \
 	for (idx_t i = 0; i < NUM_SIGNALS; i++) {                                                                          \
-		BiosignalsEDFParser::ParseFieldFromBuffer(BUF, OFFSET, sizeof(RawEDFSignalHeader::FIELD) - 1,                  \
-		                                          SIGNAL_HEADERS[i].FIELD);                                            \
+		BiosignalsEDFParser::CopyFromBuffer(BUF, OFFSET, sizeof(RawEDFSignalHeader::FIELD) - 1,                        \
+		                                    SIGNAL_HEADERS[i].FIELD);                                                  \
 	}
 
 struct EDFSignalHeader {
@@ -137,12 +138,11 @@ struct EDFSignalHeader {
 
 	void ComputeSlopeAndOffset() {
 		if (digital_max == digital_min) {
-			slope = FLT_MAX;
-			offset = 0;
+			slope = 0.0;
+			offset = physical_min;
 		} else {
 			slope = (physical_max - physical_min) / (float)(digital_max - digital_min);
-			offset = (physical_min * (float)(digital_max)-physical_max * (float)(digital_min)) /
-			         (float)(digital_max - digital_min);
+			offset = physical_min - slope * (float)digital_min;
 		}
 	};
 
@@ -168,10 +168,17 @@ struct EDFSignalHeader {
 
 class BiosignalsEDFParser {
 private:
-	static void ParseFieldFromBuffer(char *, idx_t &, size_t, char *);
+	static void CopyFromBuffer(char *, idx_t &, size_t, char *);
 
 	template <typename T>
-	static void ParseFieldFromRawHeader(const char *, T &);
+	static void ParseFieldFromBuffer(const char *buff, T &dest) {
+		string raw_field_trimmed = boost::algorithm::trim_right_copy_if(string(buff), boost::is_space());
+		try {
+			dest = boost::lexical_cast<T>(raw_field_trimmed);
+		} catch (const boost::bad_lexical_cast &) {
+			throw IOException("Invalid EDF header field: could not parse \"" + raw_field_trimmed + "\"");
+		}
+	}
 
 	static vector<unsigned int> ValidateDateTime(const string &, bool = false);
 	static bool CheckBDFVersion(const char *);
@@ -188,11 +195,25 @@ public:
 
 	static size_t GetTotalHeaderSize(const size_t);
 
-	template <size_t S>
-	static size_t GetRecordSize(const vector<EDFSignalHeader> &);
+	template <uint8_t S>
+	static size_t GetRecordSize(const vector<EDFSignalHeader> &signal_hdrs) {
+		size_t num_samples_per_record =
+		    std::accumulate(signal_hdrs.begin(), signal_hdrs.end(), 0,
+		                    [](size_t sum, const EDFSignalHeader &curr) { return sum + curr.samples_per_record; });
+		return num_samples_per_record * S;
+	}
 
-	template <size_t S>
-	static idx_t GetSignalOffsetWithinRecord(const idx_t, const vector<EDFSignalHeader> &);
+	template <uint8_t S>
+	static idx_t GetSignalOffsetWithinRecord(const idx_t signal_idx, const vector<EDFSignalHeader> &signal_hdrs) {
+		idx_t offset = 0;
+		for (idx_t i = 0; i < signal_idx; i++) {
+			const EDFSignalHeader &hdr = signal_hdrs[i];
+			offset += hdr.samples_per_record;
+		}
+		return offset * S;
+	}
+
+	static idx_t GetNumberOfNonAnnotationSignals(const vector<EDFSignalHeader> &);
 };
 
 } // namespace duckdb

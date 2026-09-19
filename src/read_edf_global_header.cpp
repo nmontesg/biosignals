@@ -56,7 +56,7 @@ unique_ptr<FunctionData> ReadEDFGlobalHeaderFuncBind(ClientContext &context, Tab
 unique_ptr<GlobalTableFunctionState> ReadEDFGlobalHeaderGlobalInit(ClientContext &context,
                                                                    TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<ReadEDFGlobalHeaderBindData>();
-	return make_uniq<ReadEDFGlobalHeaderGlobalState>(bind_data.files.size());
+	return make_uniq<ReadEDFGlobalHeaderGlobalState>(context, bind_data.files.size());
 }
 
 unique_ptr<LocalTableFunctionState> ReadEDFGlobalHeaderLocalInit(ExecutionContext &context,
@@ -104,8 +104,6 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 	auto duration_data = FlatVector::GetDataMutable<float>(duration_vector);
 	auto num_signals_data = FlatVector::GetDataMutable<int32_t>(num_signals_vector);
 
-	auto fs = CachingFileSystem::Get(context);
-
 	for (idx_t i = 0; i < count; i++) {
 		idx_t file_index = start_idx + i;
 
@@ -113,7 +111,7 @@ void ReadEDFGlobalHeaderFunc(ClientContext &context, TableFunctionInput &data, D
 		auto filename = bind_data.files[file_index].path;
 		filename_data[i] = StringVector::AddString(filename_vector, filename);
 
-		auto file_handle = fs.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
+		auto file_handle = global_state.filesystem.OpenFile(filename, FileOpenFlags::FILE_FLAGS_READ);
 		auto global_header = BiosignalsEDFParser::ParseGlobalHeader(file_handle);
 
 		// format column

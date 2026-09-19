@@ -11,9 +11,9 @@ int main(int argc, char *argv[]) {
 	expected_header.patient_id = "test file";
 	expected_header.recording_id = "EDF generator";
 
-	expected_header.start_date_year = 2002;
+	expected_header.start_date_year = 2008;
 	expected_header.start_date_month = 10;
-	expected_header.start_date_day = 8;
+	expected_header.start_date_day = 2;
 
 	expected_header.start_time_hour = 14;
 	expected_header.start_time_minute = 27;

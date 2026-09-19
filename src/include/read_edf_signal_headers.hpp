@@ -11,7 +11,8 @@ unique_ptr<FunctionData> ReadEDFSignalHeadersFuncBind(ClientContext &, TableFunc
                                                       vector<Identifier> &);
 
 struct ReadEDFSignalHeadersGlobalState : public ReadEDFGlobalHeaderGlobalState {
-	explicit ReadEDFSignalHeadersGlobalState(int64_t total_files) : ReadEDFGlobalHeaderGlobalState(total_files) {};
+	explicit ReadEDFSignalHeadersGlobalState(ClientContext &contx, int64_t total_files)
+	    : ReadEDFGlobalHeaderGlobalState(contx, total_files) {};
 
 	bool GetWorkItem(idx_t &file_idx) {
 		std::lock_guard<std::mutex> lock(mutex);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "duckdb.hpp" // IWYU pragma: keep
+#include "duckdb/storage/external_file_cache/caching_file_system.hpp"
 
 namespace duckdb {
 
@@ -13,11 +14,13 @@ unique_ptr<FunctionData> ReadEDFGlobalHeaderFuncBind(ClientContext &, TableFunct
 
 struct ReadEDFGlobalHeaderGlobalState : public GlobalTableFunctionState {
 	std::mutex mutex;
+	CachingFileSystem filesystem;
 	idx_t num_files_left_to_read;
 	const idx_t total_files;
 
-	explicit ReadEDFGlobalHeaderGlobalState(int64_t total_files)
-	    : GlobalTableFunctionState(), num_files_left_to_read(total_files), total_files(total_files) {
+	explicit ReadEDFGlobalHeaderGlobalState(ClientContext &contx, int64_t total_files)
+	    : GlobalTableFunctionState(), filesystem(CachingFileSystem::Get(contx)), num_files_left_to_read(total_files),
+	      total_files(total_files) {
 	}
 
 	bool GetWorkItem(idx_t &start_idx, idx_t &end_idx) {
