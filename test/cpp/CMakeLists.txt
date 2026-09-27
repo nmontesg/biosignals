@@ -73,3 +73,8 @@ add_biosignals_parsing_test(
 add_biosignals_parsing_test(
   TestParseBDFPlusSignalHeaders test_parse_bdf_plus_signal_headers.cpp
   bdf_plus_example.bdf)
+
+# test parsing annotation
+add_biosignals_parsing_test(
+  TestParseEDFPlusAnnotations test_parse_edf_plus_annotations.cpp
+  SC4001EC-Hypnogram.edf)

@@ -7,7 +7,6 @@
 #include "duckdb/common/vector_size.hpp"
 #include "duckdb/parser/parsed_data/create_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
-#include <cstddef>
 #include "read_edf_signal.hpp"
 
 namespace duckdb {
@@ -54,13 +53,45 @@ unique_ptr<FunctionData> ReadEDFSignalFuncBind(ClientContext &context, TableFunc
 }
 
 unique_ptr<GlobalTableFunctionState> ReadEDFSignalGlobalInit(ClientContext &context, TableFunctionInitInput &input) {
-	auto &bind_data = input.bind_data->Cast<ReadEDFGlobalHeaderBindData>();
+	auto &bind_data = input.bind_data->Cast<ReadEDFSignalBindData>();
 	return make_uniq<ReadEDFSignalGlobalState>(context, bind_data.files);
 }
 
 unique_ptr<LocalTableFunctionState> ReadEDFSignalLocalInit(ExecutionContext &context, TableFunctionInitInput &input,
                                                            GlobalTableFunctionState *global_state_p) {
 	return make_uniq<ReadEDFSignalLocalState>();
+}
+
+// void CopyRecordDataIntoLocalBuffer(ReadEDFSignalGlobalState &gstate, ReadEDFSignalLocalState &lstate) {
+void CopyRecordDataIntoLocalBuffer(EDFGlobalHeader &gheader, vector<EDFSignalHeader> &sigheaders, const idx_t from_rec,
+                                   const idx_t to_rec, vector<unsigned char> &buff, CachingFileSystem &fs,
+                                   const OpenFileInfo &fi) {
+	// read the data in bulk here
+	bool is_bdf = gheader.is_bdf;
+	size_t bytes_per_record;
+	if (is_bdf) {
+		bytes_per_record = BiosignalsEDFParser::GetRecordSize<3>(sigheaders);
+	} else {
+		bytes_per_record = BiosignalsEDFParser::GetRecordSize<2>(sigheaders);
+	}
+
+	size_t num_records = to_rec - from_rec; // lstate.stop_record_idx - lstate.start_record_idx
+	size_t num_bytes_to_copy = num_records * bytes_per_record;
+	buff.resize(num_bytes_to_copy);
+
+	idx_t offset = BiosignalsEDFParser::GetTotalHeaderSize(gheader.num_signals) + bytes_per_record * from_rec;
+
+	auto filehandle = fs.OpenFile(fi, FileOpenFlags::FILE_FLAGS_READ);
+	auto filehandle_group = filehandle->Read(num_bytes_to_copy, offset);
+	filehandle_group.CopyTo(buff.data(), num_bytes_to_copy);
+}
+
+void FindFirstNonAnnotationSignal(vector<EDFSignalHeader> &sigheaders, idx_t &signal_idx) {
+	bool is_annotation_signal = sigheaders[signal_idx].is_annotation;
+	while (is_annotation_signal) {
+		signal_idx += 1;
+		is_annotation_signal = sigheaders[signal_idx].is_annotation;
+	}
 }
 
 void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
@@ -75,36 +106,16 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 			return;
 		}
 
-		// read the data in bulk here
-		bool is_bdf = gstate.global_headers[lstate.file_idx].is_bdf;
-		size_t bytes_per_record;
-		if (is_bdf) {
-			bytes_per_record = BiosignalsEDFParser::GetRecordSize<3>(gstate.signal_headers[lstate.file_idx]);
-		} else {
-			bytes_per_record = BiosignalsEDFParser::GetRecordSize<2>(gstate.signal_headers[lstate.file_idx]);
-		}
-
-		size_t num_records = lstate.stop_record_idx - lstate.start_record_idx;
-		size_t num_bytes_to_copy = num_records * bytes_per_record;
-		lstate.buffer.resize(num_bytes_to_copy);
-
-		idx_t offset = BiosignalsEDFParser::GetTotalHeaderSize(gstate.global_headers[lstate.file_idx].num_signals) +
-		               bytes_per_record * lstate.start_record_idx;
-
-		auto filehandle = gstate.filesystem.OpenFile(gstate.files[lstate.file_idx], FileOpenFlags::FILE_FLAGS_READ);
-		auto filehandle_group = filehandle->Read(num_bytes_to_copy, offset);
-		filehandle_group.CopyTo(lstate.buffer.data(), num_bytes_to_copy);
+		CopyRecordDataIntoLocalBuffer(gstate.global_headers[lstate.file_idx], gstate.signal_headers[lstate.file_idx],
+		                              lstate.start_record_idx, lstate.stop_record_idx, lstate.buffer, gstate.filesystem,
+		                              gstate.files[lstate.file_idx]);
 
 		// the file_idx is guaranteed to have some non-annotation signal
 		lstate.curr_record_idx = lstate.start_record_idx;
 		lstate.curr_signal_idx = 0;
 		lstate.curr_start_timestep = 0;
 
-		bool is_annotation_signal = gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].is_annotation;
-		while (is_annotation_signal) {
-			lstate.curr_signal_idx += 1;
-			is_annotation_signal = gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].is_annotation;
-		}
+		FindFirstNonAnnotationSignal(gstate.signal_headers[lstate.file_idx], lstate.curr_signal_idx);
 	}
 
 	// the offset in the local buffer from which we need to start parsing samples
@@ -198,6 +209,8 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 		lstate.curr_record_idx += 1;
 		lstate.curr_signal_idx = 0;
 		lstate.curr_start_timestep = 0;
+
+		FindFirstNonAnnotationSignal(gstate.signal_headers[lstate.file_idx], lstate.curr_signal_idx);
 	}
 	if (lstate.curr_record_idx >= lstate.stop_record_idx) {
 		lstate.has_work = false;
@@ -213,11 +226,9 @@ double ReadEDFSignalProgress(ClientContext &context, const FunctionData *bind_da
 		return 100.0;
 	}
 
-	// size_t num_total_files = global_state.files.size();
 	float contribution_per_file = 1 / static_cast<float>(gstate.num_files);
 	size_t curr_num_records = gstate.global_headers[gstate.next_file_idx].num_records;
-	float curr_file_progress =
-	    static_cast<float>(gstate.next_rec_start_idx) / static_cast<float>(curr_num_records);
+	float curr_file_progress = static_cast<float>(gstate.next_rec_start_idx) / static_cast<float>(curr_num_records);
 
 	float progress = contribution_per_file * (static_cast<float>(gstate.next_file_idx) + curr_file_progress);
 	return progress * 100.0;
@@ -227,7 +238,6 @@ void RegisterReadEDFSignal(ExtensionLoader &loader) {
 	TableFunction read_edf_signal_func(Identifier("read_edf_signal"), {LogicalType::VARCHAR}, ReadEDFSignalFunc,
 	                                   ReadEDFSignalFuncBind, ReadEDFSignalGlobalInit, ReadEDFSignalLocalInit);
 	read_edf_signal_func.order_preservation_type = OrderPreservationType::NO_ORDER;
-	// read_edf_signal_func.filter_pushdown = true;
 
 	CreateTableFunctionInfo read_edf_signal_info(read_edf_signal_func);
 	FunctionDescription read_edf_signal_desc;

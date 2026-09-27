@@ -82,7 +82,7 @@ struct ReadEDFSignalGlobalState : public GlobalTableFunctionState {
 		file_idx = next_file_idx;
 		start_record_idx = next_rec_start_idx;
 		unsigned int num_records = global_headers[file_idx].num_records;
-		unsigned int num_records_per_batch = num_records / num_threads;
+		unsigned int num_records_per_batch = MaxValue<unsigned int>(num_records / num_threads, 1);
 		stop_record_idx = MinValue<idx_t>(start_record_idx + num_records_per_batch, num_records);
 
 		// prepare for the next request for work
@@ -121,6 +121,9 @@ struct ReadEDFSignalLocalState : public LocalTableFunctionState {
 unique_ptr<GlobalTableFunctionState> ReadEDFSignalGlobalInit(ClientContext &, TableFunctionInitInput &);
 unique_ptr<LocalTableFunctionState> ReadEDFSignalLocalInit(ExecutionContext &, TableFunctionInitInput &,
                                                            GlobalTableFunctionState *);
+void CopyRecordDataIntoLocalBuffer(EDFGlobalHeader &, vector<EDFSignalHeader> &, const idx_t, const idx_t,
+                                   vector<unsigned char> &, CachingFileSystem &, const OpenFileInfo &);
+void FindFirstNonAnnotationSignal(vector<EDFSignalHeader> &, idx_t &);
 void ReadEDFSignalFunc(ClientContext &, TableFunctionInput &, DataChunk &);
 double ReadEDFSignalProgress(ClientContext &, const FunctionData *, const GlobalTableFunctionState *);
 void RegisterReadEDFSignal(ExtensionLoader &);

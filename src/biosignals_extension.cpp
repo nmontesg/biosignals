@@ -2,6 +2,7 @@
 
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "biosignals_extension.hpp"
+#include "read_edf_annotations.hpp"
 #include "read_edf_global_header.hpp"
 #include "read_edf_signal_headers.hpp"
 #include "read_edf_signal.hpp"
@@ -9,6 +10,7 @@
 namespace duckdb {
 
 static void LoadInternal(ExtensionLoader &loader) {
+	RegisterReadEDFAnnotations(loader);
 	RegisterReadEDFGlobalHeader(loader);
 	RegisterReadEDFSignalHeaders(loader);
 	RegisterReadEDFSignal(loader);

@@ -1,4 +1,5 @@
 #include "biosignals_edf_parser.hpp"
+#include "boost/algorithm/string/split.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/vector.hpp"
 #include "duckdb/storage/external_file_cache/caching_file_system.hpp"
@@ -198,9 +199,54 @@ size_t BiosignalsEDFParser::GetTotalHeaderSize(const size_t n_signals) {
 	return GLOBAL_HEADER_SIZE + n_signals * SIGNAL_HEADER_SIZE;
 }
 
+idx_t BiosignalsEDFParser::GetNumberOfAnnotationSignals(const vector<EDFSignalHeader> &signal_hdrs) {
+	return std::accumulate(signal_hdrs.begin(), signal_hdrs.end(), 0,
+	                       [](size_t sum, const EDFSignalHeader &curr) { return sum + (curr.is_annotation ? 1 : 0); });
+}
+
 idx_t BiosignalsEDFParser::GetNumberOfNonAnnotationSignals(const vector<EDFSignalHeader> &signal_hdrs) {
 	return std::accumulate(signal_hdrs.begin(), signal_hdrs.end(), 0,
 	                       [](size_t sum, const EDFSignalHeader &curr) { return sum + (curr.is_annotation ? 0 : 1); });
+}
+
+TimestampedAnnotationList BiosignalsEDFParser::ParseTAL(const string &_raw) {
+	TimestampedAnnotationList tal;
+
+	std::vector<std::string> components;
+
+	tal.has_duration = (std::find(_raw.begin(), _raw.end(), TAL_DURATION_DELIMITER) != _raw.end());
+	boost::split(components, _raw, [](char c) { return c == TAL_DURATION_DELIMITER or c == TAL_ANNOTATION_DELIMITER; });
+
+	tal.onset = boost::lexical_cast<float>(components[0]);
+
+	idx_t _start = (tal.has_duration ? 2 : 1);
+	if (tal.has_duration) {
+		tal.duration = boost::lexical_cast<float>(components[1]);
+	}
+
+	for (idx_t i = _start; i < components.size(); i++) {
+		if (!components[i].empty()) {
+			tal.annotations.push_back(components[i]);
+		}
+	}
+
+	return tal;
+}
+
+vector<TimestampedAnnotationList> BiosignalsEDFParser::ParseRecordTALs(const string &_raw) {
+	std::vector<std::string> raw_tals;
+	boost::split(raw_tals, _raw, [](char c) { return c == TAL_DELIMITER; });
+
+	vector<TimestampedAnnotationList> tals;
+	for (auto &_tal : raw_tals) {
+		if (_tal.empty()) {
+			continue;
+		}
+		TimestampedAnnotationList tal = ParseTAL(_tal);
+		tals.push_back(tal);
+	}
+
+	return tals;
 }
 
 } // namespace duckdb

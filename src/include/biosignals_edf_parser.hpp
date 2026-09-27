@@ -22,6 +22,10 @@
 #define BDF_PLUS_DISCONTINUOUS "BDF+D"
 #define BDF_ANNOTATIONS        "BDF Annotations"
 
+#define TAL_DELIMITER            0x00
+#define TAL_DURATION_DELIMITER   0x15 // 21
+#define TAL_ANNOTATION_DELIMITER 0x14 // 20
+
 namespace duckdb {
 
 struct RawEDFGlobalHeader {
@@ -166,6 +170,15 @@ struct EDFSignalHeader {
 	}
 };
 
+struct TimestampedAnnotationList {
+	float onset;
+
+	bool has_duration;
+	float duration;
+
+	std::vector<std::string> annotations;
+};
+
 class BiosignalsEDFParser {
 private:
 	static void CopyFromBuffer(char *, idx_t &, size_t, char *);
@@ -213,7 +226,11 @@ public:
 		return offset * S;
 	}
 
+	static idx_t GetNumberOfAnnotationSignals(const vector<EDFSignalHeader> &);
 	static idx_t GetNumberOfNonAnnotationSignals(const vector<EDFSignalHeader> &);
+
+	static TimestampedAnnotationList ParseTAL(const string &);
+	static vector<TimestampedAnnotationList> ParseRecordTALs(const string &);
 };
 
 } // namespace duckdb

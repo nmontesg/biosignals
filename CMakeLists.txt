@@ -35,7 +35,7 @@ include_directories(src/include)
 set(EXTENSION_SOURCES
     src/biosignals_edf_parser.cpp src/biosignals_extension.cpp
     src/read_edf_global_header.cpp src/read_edf_signal_headers.cpp
-    src/read_edf_signal.cpp)
+    src/read_edf_signal.cpp src/read_edf_annotations.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})

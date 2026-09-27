@@ -109,6 +109,11 @@ FROM read_edf_signal_headers('test/test_data/**');
 
 # ========================================== read_edf_signal ==========================================
 
+# at least one argument needed
+statement error
+FROM read_edf_signal();
+----
+
 query II
 SELECT signal_id, digital_signal FROM read_edf_signal('test/test_data/edf_example.edf') WHERE timestep = 0 ORDER BY signal_id;
 ----
@@ -177,3 +182,37 @@ query I
 SELECT COUNT(*) FROM read_edf_signal('test/test_data/*');
 ----
 45708460
+
+
+# ========================================== read_edf_annotations ==========================================
+
+# at least one argument needed
+statement error
+FROM read_edf_annotations();
+----
+
+query IIIIIII
+FROM read_edf_annotations('test/test_data/ST7011JP-Hypnogram.edf') ORDER BY tal_id LIMIT 3;
+----
+test/test_data/ST7011JP-Hypnogram.edf	1	1	1	0.0	NULL	NULL
+test/test_data/ST7011JP-Hypnogram.edf	1	1	2	0.0	1560.0	[Sleep stage W]
+test/test_data/ST7011JP-Hypnogram.edf	1	1	3	1560.0	90.0	[Sleep stage 1]
+
+query IIIIIII
+FROM read_edf_annotations('test/test_data/edf_example.edf');
+----
+
+query IIIIIII
+FROM read_edf_annotations('test/test_data/bdf_example.bdf');
+----
+
+query I
+SELECT COUNT(*) FROM read_edf_annotations('test/test_data/edf_plus_example.edf');
+----
+602
+
+statement ok
+FROM read_edf_annotations('test/test_data/*-Hypnogram.edf');
+
+statement ok
+FROM read_edf_annotations('test/test_data/*');
