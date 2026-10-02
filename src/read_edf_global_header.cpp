@@ -154,7 +154,9 @@ double ReadEDFGlobalHeaderProgress(ClientContext &context, const FunctionData *b
 }
 
 void RegisterReadEDFGlobalHeader(ExtensionLoader &loader) {
-	TableFunction read_edf_global_header_func(Identifier("read_edf_global_header"), {LogicalType::VARCHAR},
+	FunctionSignature read_edf_global_header_signature;
+	read_edf_global_header_signature.AddArgs(Identifier("path"), LogicalType::VARCHAR);
+	TableFunction read_edf_global_header_func(Identifier("read_edf_global_header"), read_edf_global_header_signature,
 	                                          ReadEDFGlobalHeaderFunc, ReadEDFGlobalHeaderFuncBind,
 	                                          ReadEDFGlobalHeaderGlobalInit, ReadEDFGlobalHeaderLocalInit);
 	read_edf_global_header_func.order_preservation_type = OrderPreservationType::NO_ORDER;
@@ -162,8 +164,6 @@ void RegisterReadEDFGlobalHeader(ExtensionLoader &loader) {
 	CreateTableFunctionInfo read_edf_global_header_info(read_edf_global_header_func);
 	FunctionDescription read_edf_global_header_desc;
 
-	read_edf_global_header_desc.parameter_types = {LogicalType::VARCHAR};
-	read_edf_global_header_desc.parameter_names = {"path"};
 	read_edf_global_header_desc.description = "Read global header information from EDF(+) / BDF(+) files into DuckDB.";
 	read_edf_global_header_desc.examples = {"FROM read_edf_global_header('/path/to/recording.edf');",
 	                                        "FROM read_edf_global_header('/path/to/all_recordings/*');"};

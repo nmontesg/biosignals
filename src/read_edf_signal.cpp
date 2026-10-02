@@ -167,8 +167,12 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 	idx_t timestep_start =
 	    lstate.curr_record_idx * gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].samples_per_record +
 	    lstate.curr_start_timestep;
+	// TODO this needs to adapt to handle discontinuous filed (EDF+D, BDF+D)
 	double time_start = (double)lstate.curr_record_idx * gstate.global_headers[lstate.file_idx].duration_record +
 	                    period * (double)lstate.curr_start_timestep;
+	if (gstate.global_headers[lstate.file_idx].is_discontinuous) {
+		// time_start = ...;
+	}
 
 	float physical_offset = gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].offset;
 	float physical_slope = gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].slope;
@@ -235,15 +239,15 @@ double ReadEDFSignalProgress(ClientContext &context, const FunctionData *bind_da
 }
 
 void RegisterReadEDFSignal(ExtensionLoader &loader) {
-	TableFunction read_edf_signal_func(Identifier("read_edf_signal"), {LogicalType::VARCHAR}, ReadEDFSignalFunc,
+	FunctionSignature read_edf_signal_signature;
+	read_edf_signal_signature.AddArgs(Identifier("path"), LogicalType::VARCHAR);
+	TableFunction read_edf_signal_func(Identifier("read_edf_signal"), read_edf_signal_signature, ReadEDFSignalFunc,
 	                                   ReadEDFSignalFuncBind, ReadEDFSignalGlobalInit, ReadEDFSignalLocalInit);
 	read_edf_signal_func.order_preservation_type = OrderPreservationType::NO_ORDER;
 
 	CreateTableFunctionInfo read_edf_signal_info(read_edf_signal_func);
 	FunctionDescription read_edf_signal_desc;
 
-	read_edf_signal_desc.parameter_types = {LogicalType::VARCHAR};
-	read_edf_signal_desc.parameter_names = {"path"};
 	read_edf_signal_desc.description = "Read signal records from EDF(+) / BDF(+) files into DuckDB.";
 	read_edf_signal_desc.examples = {"FROM read_edf_signal('/path/to/recording.edf');",
 	                                 "FROM read_edf_signal('/path/to/all_recordings/*');"};

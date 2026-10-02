@@ -164,7 +164,9 @@ double ReadEDFSignalHeadersProgress(ClientContext &context, const FunctionData *
 }
 
 void RegisterReadEDFSignalHeaders(ExtensionLoader &loader) {
-	TableFunction read_edf_signal_headers_func(Identifier("read_edf_signal_headers"), {LogicalType::VARCHAR},
+	FunctionSignature read_edf_signal_headers_signature;
+	read_edf_signal_headers_signature.AddArgs(Identifier("path"), LogicalType::VARCHAR);
+	TableFunction read_edf_signal_headers_func(Identifier("read_edf_signal_headers"), read_edf_signal_headers_signature,
 	                                           ReadEDFSignalHeadersFunc, ReadEDFSignalHeadersFuncBind,
 	                                           ReadEDFSignalHeadersGlobalInit, ReadEDFSignalHeadersLocalInit);
 	read_edf_signal_headers_func.order_preservation_type = OrderPreservationType::NO_ORDER;
@@ -172,8 +174,6 @@ void RegisterReadEDFSignalHeaders(ExtensionLoader &loader) {
 	CreateTableFunctionInfo read_edf_signal_headers_info(read_edf_signal_headers_func);
 	FunctionDescription read_edf_signal_headers_desc;
 
-	read_edf_signal_headers_desc.parameter_types = {LogicalType::VARCHAR};
-	read_edf_signal_headers_desc.parameter_names = {"path"};
 	read_edf_signal_headers_desc.description =
 	    "Read signal information from the headers of EDF(+) / BDF(+) files into DuckDB.";
 	read_edf_signal_headers_desc.examples = {"FROM read_edf_signal_headers('/path/to/recording.edf');",

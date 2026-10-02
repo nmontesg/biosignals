@@ -223,7 +223,9 @@ double ReadEDFAnnotationsProgress(ClientContext &context, const FunctionData *bi
 }
 
 void RegisterReadEDFAnnotations(ExtensionLoader &loader) {
-	TableFunction read_edf_annotations_func(Identifier("read_edf_annotations"), {LogicalType::VARCHAR},
+	FunctionSignature read_edf_annotations_signature;
+	read_edf_annotations_signature.AddArgs(Identifier("path"), LogicalType::VARCHAR);
+	TableFunction read_edf_annotations_func(Identifier("read_edf_annotations"), read_edf_annotations_signature,
 	                                        ReadEDFAnnotationsFunc, ReadEDFAnnotationsFuncBind,
 	                                        ReadEDFAnnotationsGlobalInit, ReadEDFAnnotationsLocalInit);
 	read_edf_annotations_func.order_preservation_type = OrderPreservationType::NO_ORDER;
@@ -231,8 +233,6 @@ void RegisterReadEDFAnnotations(ExtensionLoader &loader) {
 	CreateTableFunctionInfo read_edf_annotations_info(read_edf_annotations_func);
 	FunctionDescription read_edf_annotations_desc;
 
-	read_edf_annotations_desc.parameter_types = {LogicalType::VARCHAR};
-	read_edf_annotations_desc.parameter_names = {"path"};
 	read_edf_annotations_desc.description = "Read annotation signals from EDF(+) / BDF(+) files into DuckDB.";
 	read_edf_annotations_desc.examples = {"FROM read_edf_annotations('/path/to/recording.edf');",
 	                                      "FROM read_edf_annotations('/path/to/all_recordings/*');"};
