@@ -215,7 +215,7 @@ TimestampedAnnotationList BiosignalsEDFParser::ParseTAL(const string &_raw) {
 	std::vector<std::string> components;
 
 	tal.has_duration = (std::find(_raw.begin(), _raw.end(), TAL_DURATION_DELIMITER) != _raw.end());
-	boost::split(components, _raw, [](char c) { return c == TAL_DURATION_DELIMITER or c == TAL_ANNOTATION_DELIMITER; });
+	boost::split(components, _raw, [](char c) { return c == TAL_DURATION_DELIMITER || c == TAL_ANNOTATION_DELIMITER; });
 
 	tal.onset = boost::lexical_cast<float>(components[0]);
 
