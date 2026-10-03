@@ -149,8 +149,8 @@ void CopyRecordDataIntoLocalBuffer(ReadEDFContentGlobalState<ReadAnnotations> &g
 	    BiosignalsEDFParser::GetTotalHeaderSize(gheader.num_signals) + bytes_per_record * lstate.start_record_idx;
 
 	auto filehandle = gstate.filesystem.OpenFile(gstate.files[lstate.file_idx], FileOpenFlags::FILE_FLAGS_READ);
-	auto filehandle_group = filehandle->Read(num_bytes_to_copy, offset);
-	filehandle_group.CopyTo(lstate.buffer.data(), num_bytes_to_copy);
+	auto shared_filehandle = filehandle->GetFileHandle();
+	shared_filehandle->Read(lstate.buffer.data(), num_bytes_to_copy, offset);
 }
 
 template <bool ReadAnnotations>

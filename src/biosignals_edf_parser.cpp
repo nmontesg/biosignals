@@ -1,6 +1,7 @@
 #include "biosignals_edf_parser.hpp"
 #include "boost/algorithm/string/split.hpp"
 #include "duckdb/common/exception.hpp"
+#include "duckdb/common/shared_ptr_ipp.hpp"
 #include "duckdb/common/vector.hpp"
 #include "duckdb/storage/external_file_cache/caching_file_system.hpp"
 
@@ -18,8 +19,8 @@ RawEDFGlobalHeader BiosignalsEDFParser::ParseRawGlobalHeader(unique_ptr<CachingF
 	idx_t offset = 0;
 	fh->Seek(offset);
 	idx_t nr_bytes = GLOBAL_HEADER_SIZE;
-	FileBufferHandleGroup fh_group = fh->Read(nr_bytes);
-	fh_group.CopyTo(data_ptr_cast(buffer), nr_bytes);
+	shared_ptr<FileHandle> shared_fh = fh->GetFileHandle();
+	shared_fh->Read(data_ptr_cast(buffer), nr_bytes);
 
 	BiosignalsEDFParser::CopyFromBuffer(buffer, offset, sizeof(raw_header.version) - 1, raw_header.version);
 	BiosignalsEDFParser::CopyFromBuffer(buffer, offset, sizeof(raw_header.patient_id) - 1, raw_header.patient_id);

@@ -25,9 +25,9 @@ int main(int argc, char *argv[]) {
 
 	std::vector<unsigned char> buffer;
 	buffer.resize(num_bytes_to_copy);
-
-	auto fh_group = fh->Read(num_bytes_to_copy, offset);
-	fh_group.CopyTo(buffer.data(), num_bytes_to_copy);
+	
+	duckdb::shared_ptr<duckdb::FileHandle> shared_fh = fh->GetFileHandle();
+	shared_fh->Read(buffer.data(), num_bytes_to_copy, offset);
 
 	std::string annotation_data(buffer.begin(), buffer.end());
 	duckdb::vector<duckdb::TimestampedAnnotationList> tals =

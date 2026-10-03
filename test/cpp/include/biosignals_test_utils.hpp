@@ -1,6 +1,6 @@
 #pragma once
 
-#include "biosignals_win32.hpp""
+#include "biosignals_win32.hpp"
 
 #include "biosignals_edf_parser.hpp"
 #include "duckdb/main/database.hpp"
