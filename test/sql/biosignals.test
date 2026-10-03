@@ -12,6 +12,16 @@ FROM read_edf_signal_headers('test/test_data/edf_example.edf');
 ----
 Catalog Error: Table Function with name read_edf_signal_headers does not exist!
 
+statement error
+FROM read_edf_signal('test/test_data/edf_example.edf');
+----
+Catalog Error: Table Function with name read_edf_signal does not exist!
+
+statement error
+FROM read_edf_annotations('test/test_data/edf_example.edf');
+----
+Catalog Error: Table Function with name read_edf_annotations does not exist!
+
 require biosignals
 
 # ========================================== read_edf_global_header ==========================================
