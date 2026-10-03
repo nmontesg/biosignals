@@ -1,5 +1,7 @@
 #pragma once
 
+#include "biosignals_win32.hpp"
+
 #include <cstddef>
 #include <iomanip>
 #include <numeric>
@@ -179,7 +181,7 @@ struct TimestampedAnnotationList {
 	std::vector<std::string> annotations;
 };
 
-class BiosignalsEDFParser {
+class BIOSIGNALS_EXPORT BiosignalsEDFParser {
 private:
 	static void CopyFromBuffer(char *, idx_t &, size_t, char *);
 

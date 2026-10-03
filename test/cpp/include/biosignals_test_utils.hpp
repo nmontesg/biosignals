@@ -1,11 +1,13 @@
 #pragma once
 
+#include "biosignals_win32.hpp""
+
 #include "biosignals_edf_parser.hpp"
 #include "duckdb/main/database.hpp"
 #include <sstream>
 #include <string>
 
-class BiosignalsTestUtils {
+class BIOSIGNALS_EXPORT BiosignalsTestUtils {
 public:
 	static duckdb::unique_ptr<duckdb::CachingFileHandle> GetCachingFileHandle(duckdb::DuckDB &, const char *);
 
