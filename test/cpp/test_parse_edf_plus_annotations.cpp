@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 
 	std::vector<unsigned char> buffer;
 	buffer.resize(num_bytes_to_copy);
-	
+
 	duckdb::shared_ptr<duckdb::FileHandle> shared_fh = fh->GetFileHandle();
 	shared_fh->Read(buffer.data(), num_bytes_to_copy, offset);
 

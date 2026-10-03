@@ -15,13 +15,13 @@ LOCAL_DATA_SOURCE = ./test/test_data
 GARAGE_DATA_DEST = test_data
 
 test_cpp_debug:
-	ctest --test-dir ./build/debug/extension/biosignals/test/cpp --output-on-failure
+	ctest --test-dir build/debug/extension/biosignals/test/cpp --output-on-failure
 
 test_cpp_release:
-	ctest --test-dir ./build/release/extension/biosignals/test/cpp --output-on-failure
+	ctest --test-dir build/release/extension/biosignals/test/cpp --output-on-failure
 
 test_cpp_reldebug:
-	ctest --test-dir ./build/reldebug/extension/biosignals/test/cpp --output-on-failure
+	ctest --test-dir build/reldebug/extension/biosignals/test/cpp --output-on-failure
 
 test_all_debug: test_cpp_debug
 	$(MAKE) -f extension-ci-tools/makefiles/duckdb_extension.Makefile test_debug

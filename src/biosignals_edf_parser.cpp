@@ -131,10 +131,8 @@ vector<RawEDFSignalHeader> BiosignalsEDFParser::ParseRawSignalHeaders(unique_ptr
 	vector<char> buffer(nr_bytes);
 
 	idx_t file_offset = GLOBAL_HEADER_SIZE;
-	fh->Seek(file_offset);
-
-	FileBufferHandleGroup fh_group = fh->Read(nr_bytes, file_offset);
-	fh_group.CopyTo(data_ptr_cast(buffer.data()), nr_bytes);
+	shared_ptr<FileHandle> shared_fh = fh->GetFileHandle();
+	shared_fh->Read(buffer.data(), nr_bytes, file_offset);
 
 	idx_t buf_offset = 0;
 
