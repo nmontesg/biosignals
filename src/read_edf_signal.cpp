@@ -2,11 +2,9 @@
 #include "boost/endian/conversion.hpp"
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "duckdb/common/enums/order_preservation_type.hpp"
-#include "duckdb/common/helper.hpp"
-#include "duckdb/common/typedefs.hpp"
-#include "duckdb/common/vector_size.hpp"
 #include "duckdb/parser/parsed_data/create_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
+#include "read_edf_content.hpp"
 #include "read_edf_signal.hpp"
 
 namespace duckdb {
@@ -62,35 +60,33 @@ unique_ptr<LocalTableFunctionState> ReadEDFSignalLocalInit(ExecutionContext &con
 	return make_uniq<ReadEDFSignalLocalState>();
 }
 
-// void CopyRecordDataIntoLocalBuffer(ReadEDFSignalGlobalState &gstate, ReadEDFSignalLocalState &lstate) {
-void CopyRecordDataIntoLocalBuffer(EDFGlobalHeader &gheader, vector<EDFSignalHeader> &sigheaders, const idx_t from_rec,
-                                   const idx_t to_rec, vector<unsigned char> &buff, CachingFileSystem &fs,
-                                   const OpenFileInfo &fi) {
-	// read the data in bulk here
-	bool is_bdf = gheader.is_bdf;
-	size_t bytes_per_record;
-	if (is_bdf) {
-		bytes_per_record = BiosignalsEDFParser::GetRecordSize<3>(sigheaders);
-	} else {
-		bytes_per_record = BiosignalsEDFParser::GetRecordSize<2>(sigheaders);
+void FindFirstNonAnnotationSignal(const vector<EDFSignalHeader> &sigheaders, idx_t &signal_idx) {
+	auto it =
+	    find_if(sigheaders.begin(), sigheaders.end(), [](const EDFSignalHeader &hdr) { return !hdr.is_annotation; });
+	if (it == sigheaders.end()) {
+		throw IOException("Could not find non-annotation signal.");
 	}
-
-	size_t num_records = to_rec - from_rec; // lstate.stop_record_idx - lstate.start_record_idx
-	size_t num_bytes_to_copy = num_records * bytes_per_record;
-	buff.resize(num_bytes_to_copy);
-
-	idx_t offset = BiosignalsEDFParser::GetTotalHeaderSize(gheader.num_signals) + bytes_per_record * from_rec;
-
-	auto filehandle = fs.OpenFile(fi, FileOpenFlags::FILE_FLAGS_READ);
-	auto filehandle_group = filehandle->Read(num_bytes_to_copy, offset);
-	filehandle_group.CopyTo(buff.data(), num_bytes_to_copy);
+	signal_idx = it - sigheaders.begin();
 }
 
-void FindFirstNonAnnotationSignal(vector<EDFSignalHeader> &sigheaders, idx_t &signal_idx) {
-	bool is_annotation_signal = sigheaders[signal_idx].is_annotation;
-	while (is_annotation_signal) {
-		signal_idx += 1;
-		is_annotation_signal = sigheaders[signal_idx].is_annotation;
+void FindFirstAnnotationSignal(const vector<EDFSignalHeader> &sigheaders, idx_t &signal_idx) {
+	auto it =
+	    find_if(sigheaders.begin(), sigheaders.end(), [](const EDFSignalHeader &hdr) { return hdr.is_annotation; });
+	if (it == sigheaders.end()) {
+		throw IOException("Could not find annotation signal.");
+	}
+	signal_idx = it - sigheaders.begin();
+}
+
+void GetCurrentRecordOffset(const ReadEDFSignalGlobalState &gstate, ReadEDFSignalLocalState &lstate) {
+	// first find annotation signal
+	idx_t first_annotation_signal_idx;
+	FindFirstAnnotationSignal(gstate.signal_headers[lstate.file_idx], first_annotation_signal_idx);
+	vector<TimestampedAnnotationList> tals = GetSignalAnnotations<false>(gstate, lstate, first_annotation_signal_idx);
+	try {
+		lstate.curr_record_onset = tals[0].onset;
+	} catch (const char *msg) {
+		throw IOException("Could not read record onset in discontinuous file: " + string(msg));
 	}
 }
 
@@ -106,9 +102,7 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 			return;
 		}
 
-		CopyRecordDataIntoLocalBuffer(gstate.global_headers[lstate.file_idx], gstate.signal_headers[lstate.file_idx],
-		                              lstate.start_record_idx, lstate.stop_record_idx, lstate.buffer, gstate.filesystem,
-		                              gstate.files[lstate.file_idx]);
+		CopyRecordDataIntoLocalBuffer<false>(gstate, lstate);
 
 		// the file_idx is guaranteed to have some non-annotation signal
 		lstate.curr_record_idx = lstate.start_record_idx;
@@ -116,21 +110,19 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 		lstate.curr_start_timestep = 0;
 
 		FindFirstNonAnnotationSignal(gstate.signal_headers[lstate.file_idx], lstate.curr_signal_idx);
+
+		// if file is discontinuous, get the time offset of the record
+		bool is_discontinuous = gstate.global_headers[lstate.file_idx].is_discontinuous;
+		if (is_discontinuous) {
+			GetCurrentRecordOffset(gstate, lstate);
+		}
 	}
 
 	// the offset in the local buffer from which we need to start parsing samples
+	size_t bytes_per_record = GetBytesPerRecord<false>(gstate, lstate);
+	size_t signal_offset_in_record = GetSignalOffsetInRecord<false>(gstate, lstate, lstate.curr_signal_idx);
+
 	bool is_bdf = gstate.global_headers[lstate.file_idx].is_bdf;
-	size_t bytes_per_record;
-	size_t signal_offset_in_record;
-	if (is_bdf) {
-		bytes_per_record = BiosignalsEDFParser::GetRecordSize<3>(gstate.signal_headers[lstate.file_idx]);
-		signal_offset_in_record = BiosignalsEDFParser::GetSignalOffsetWithinRecord<3>(
-		    lstate.curr_signal_idx, gstate.signal_headers[lstate.file_idx]);
-	} else {
-		bytes_per_record = BiosignalsEDFParser::GetRecordSize<2>(gstate.signal_headers[lstate.file_idx]);
-		signal_offset_in_record = BiosignalsEDFParser::GetSignalOffsetWithinRecord<2>(
-		    lstate.curr_signal_idx, gstate.signal_headers[lstate.file_idx]);
-	}
 	size_t bytes_per_sample = (is_bdf ? 3 : 2);
 	idx_t buffer_offset = bytes_per_record * (lstate.curr_record_idx - lstate.start_record_idx) +
 	                      signal_offset_in_record + lstate.curr_start_timestep * bytes_per_sample;
@@ -167,11 +159,15 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 	idx_t timestep_start =
 	    lstate.curr_record_idx * gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].samples_per_record +
 	    lstate.curr_start_timestep;
-	// TODO this needs to adapt to handle discontinuous filed (EDF+D, BDF+D)
-	double time_start = (double)lstate.curr_record_idx * gstate.global_headers[lstate.file_idx].duration_record +
-	                    period * (double)lstate.curr_start_timestep;
-	if (gstate.global_headers[lstate.file_idx].is_discontinuous) {
-		// time_start = ...;
+
+	// the start time of the record is different is the file is discontinuous
+	bool is_discontinuous = gstate.global_headers[lstate.file_idx].is_discontinuous;
+	double time_start;
+	if (is_discontinuous) {
+		time_start = lstate.curr_record_onset;
+	} else {
+		time_start = (double)lstate.curr_record_idx * gstate.global_headers[lstate.file_idx].duration_record +
+		             period * (double)lstate.curr_start_timestep;
 	}
 
 	float physical_offset = gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].offset;
@@ -215,7 +211,12 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 		lstate.curr_start_timestep = 0;
 
 		FindFirstNonAnnotationSignal(gstate.signal_headers[lstate.file_idx], lstate.curr_signal_idx);
+
+		if (is_discontinuous && lstate.curr_record_idx < lstate.stop_record_idx) {
+			GetCurrentRecordOffset(gstate, lstate);
+		}
 	}
+
 	if (lstate.curr_record_idx >= lstate.stop_record_idx) {
 		lstate.has_work = false;
 	}
@@ -223,19 +224,7 @@ void ReadEDFSignalFunc(ClientContext &context, TableFunctionInput &data, DataChu
 
 double ReadEDFSignalProgress(ClientContext &context, const FunctionData *bind_data_p,
                              const GlobalTableFunctionState *global_state_p) {
-	auto &bind_data = bind_data_p->Cast<ReadEDFSignalBindData>();
-	auto &gstate = global_state_p->Cast<ReadEDFSignalGlobalState>();
-
-	if (bind_data.files.empty()) {
-		return 100.0;
-	}
-
-	float contribution_per_file = 1 / static_cast<float>(gstate.num_files);
-	size_t curr_num_records = gstate.global_headers[gstate.next_file_idx].num_records;
-	float curr_file_progress = static_cast<float>(gstate.next_rec_start_idx) / static_cast<float>(curr_num_records);
-
-	float progress = contribution_per_file * (static_cast<float>(gstate.next_file_idx) + curr_file_progress);
-	return progress * 100.0;
+	return ReadEDFContentProgress<false>(context, bind_data_p, global_state_p);
 }
 
 void RegisterReadEDFSignal(ExtensionLoader &loader) {

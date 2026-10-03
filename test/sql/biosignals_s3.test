@@ -29,12 +29,12 @@ FROM read_edf_global_header('s3://biosignals-test/test_data/**');
 query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/**');
 ----
-8
+9
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.edf');
 ----
-6
+7
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('s3://biosignals-test/test_data/*.bdf');
@@ -50,12 +50,12 @@ FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
 query I
 SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/**');
 ----
-71
+83
 
 query I
 SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/*.edf');
 ----
-42
+54
 
 query I
 SELECT COUNT(*) FROM read_edf_signal_headers('s3://biosignals-test/test_data/*.bdf');
@@ -81,7 +81,7 @@ FROM read_edf_signal('s3://biosignals-test/test_data/*');
 query I
 SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*.edf');
 ----
-42299500
+42323700
 
 query I
 SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*.bdf');
@@ -91,7 +91,7 @@ SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*.bdf');
 query I
 SELECT COUNT(*) FROM read_edf_signal('s3://biosignals-test/test_data/*');
 ----
-45708460
+45732660
 
 
 # ========================================== read_edf_annotations ==========================================

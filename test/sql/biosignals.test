@@ -47,12 +47,12 @@ FROM read_edf_global_header('test/test_data/**');
 query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/**');
 ----
-8
+9
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.edf');
 ----
-6
+7
 
 query I
 SELECT COUNT(*) FROM read_edf_global_header('test/test_data/*.bdf');
@@ -171,7 +171,7 @@ FROM read_edf_signal('test/test_data/*');
 query I
 SELECT COUNT(*) FROM read_edf_signal('test/test_data/*.edf');
 ----
-42299500
+42323700
 
 query I
 SELECT COUNT(*) FROM read_edf_signal('test/test_data/*.bdf');
@@ -181,8 +181,20 @@ SELECT COUNT(*) FROM read_edf_signal('test/test_data/*.bdf');
 query I
 SELECT COUNT(*) FROM read_edf_signal('test/test_data/*');
 ----
-45708460
+45732660
 
+# read a discontinuous file
+query I
+SELECT
+	COUNT(s.time != a.onset)
+FROM read_edf_signal('test/test_data/edf_plusD_example.edf') s
+LEFT JOIN (
+	FROM read_edf_annotations('test/test_data/edf_plusD_example.edf')
+	WHERE annotations IS NULL
+) a ON s.record_id = a.record_id
+WHERE s.signal_id = 1 AND s.timestep % 200 = 0;
+----
+11
 
 # ========================================== read_edf_annotations ==========================================
 

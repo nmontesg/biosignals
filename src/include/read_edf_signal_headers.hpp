@@ -1,11 +1,12 @@
 #pragma once
 
 #include "duckdb.hpp" // IWYU pragma: keep
+#include "read_edf_content.hpp"
 #include "read_edf_global_header.hpp"
 
 namespace duckdb {
 
-struct ReadEDFSignalHeadersBindData : public ReadEDFGlobalHeaderBindData {};
+struct ReadEDFSignalHeadersBindData : public ReadEDFContentBindData {};
 
 unique_ptr<FunctionData> ReadEDFSignalHeadersFuncBind(ClientContext &, TableFunctionBindInput &, vector<LogicalType> &,
                                                       vector<Identifier> &);

@@ -53,14 +53,6 @@ unique_ptr<FunctionData> ReadEDFAnnotationsFuncBind(ClientContext &context, Tabl
 	return std::move(result);
 }
 
-void FindFirstAnnotationSignal(vector<EDFSignalHeader> &sigheaders, idx_t &signal_idx) {
-	bool is_annotation_signal = sigheaders[signal_idx].is_annotation;
-	while (!is_annotation_signal) {
-		signal_idx += 1;
-		is_annotation_signal = sigheaders[signal_idx].is_annotation;
-	}
-}
-
 unique_ptr<GlobalTableFunctionState> ReadEDFAnnotationsGlobalInit(ClientContext &context,
                                                                   TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<ReadEDFAnnotationsBindData>();
@@ -85,9 +77,7 @@ void ReadEDFAnnotationsFunc(ClientContext &context, TableFunctionInput &data, Da
 			return;
 		}
 
-		CopyRecordDataIntoLocalBuffer(gstate.global_headers[lstate.file_idx], gstate.signal_headers[lstate.file_idx],
-		                              lstate.start_record_idx, lstate.stop_record_idx, lstate.buffer, gstate.filesystem,
-		                              gstate.files[lstate.file_idx]);
+		CopyRecordDataIntoLocalBuffer<true>(gstate, lstate);
 
 		// the file_idx is guaranteed to have some annotation signal
 		lstate.curr_record_idx = lstate.start_record_idx;
@@ -96,29 +86,7 @@ void ReadEDFAnnotationsFunc(ClientContext &context, TableFunctionInput &data, Da
 		FindFirstAnnotationSignal(gstate.signal_headers[lstate.file_idx], lstate.curr_signal_idx);
 	}
 
-	// the offset in the local buffer from which we need to start parsing samples
-	bool is_bdf = gstate.global_headers[lstate.file_idx].is_bdf;
-	size_t bytes_per_record;
-	size_t signal_offset_in_record;
-	if (is_bdf) {
-		bytes_per_record = BiosignalsEDFParser::GetRecordSize<3>(gstate.signal_headers[lstate.file_idx]);
-		signal_offset_in_record = BiosignalsEDFParser::GetSignalOffsetWithinRecord<3>(
-		    lstate.curr_signal_idx, gstate.signal_headers[lstate.file_idx]);
-	} else {
-		bytes_per_record = BiosignalsEDFParser::GetRecordSize<2>(gstate.signal_headers[lstate.file_idx]);
-		signal_offset_in_record = BiosignalsEDFParser::GetSignalOffsetWithinRecord<2>(
-		    lstate.curr_signal_idx, gstate.signal_headers[lstate.file_idx]);
-	}
-	size_t bytes_per_sample = (is_bdf ? 3 : 2);
-	int64_t buffer_offset =
-	    (int64_t)(bytes_per_record * (lstate.curr_record_idx - lstate.start_record_idx) + signal_offset_in_record);
-
-	// parse the TALs
-	int64_t annotations_size =
-	    (int64_t)(gstate.signal_headers[lstate.file_idx][lstate.curr_signal_idx].samples_per_record * bytes_per_sample);
-	std::string annotation_data(lstate.buffer.begin() + buffer_offset,
-	                            lstate.buffer.begin() + buffer_offset + annotations_size);
-	vector<TimestampedAnnotationList> tals = BiosignalsEDFParser::ParseRecordTALs(annotation_data);
+	vector<TimestampedAnnotationList> tals = GetSignalAnnotations<true>(gstate, lstate, lstate.curr_signal_idx);
 	size_t num_tals = tals.size();
 	if (num_tals > STANDARD_VECTOR_SIZE) {
 		throw IOException("Cannot parse EDF annotations with " + to_string(tals.size()) +
@@ -207,19 +175,7 @@ void ReadEDFAnnotationsFunc(ClientContext &context, TableFunctionInput &data, Da
 
 double ReadEDFAnnotationsProgress(ClientContext &context, const FunctionData *bind_data_p,
                                   const GlobalTableFunctionState *global_state_p) {
-	auto &bind_data = bind_data_p->Cast<ReadEDFAnnotationsBindData>();
-	auto &gstate = global_state_p->Cast<ReadEDFAnnotationsGlobalState>();
-
-	if (bind_data.files.empty()) {
-		return 100.0;
-	}
-
-	float contribution_per_file = 1 / static_cast<float>(gstate.num_files);
-	size_t curr_num_records = gstate.global_headers[gstate.next_file_idx].num_records;
-	float curr_file_progress = static_cast<float>(gstate.next_rec_start_idx) / static_cast<float>(curr_num_records);
-
-	float progress = contribution_per_file * (static_cast<float>(gstate.next_file_idx) + curr_file_progress);
-	return progress * 100.0;
+	return ReadEDFContentProgress<true>(context, bind_data_p, global_state_p);
 }
 
 void RegisterReadEDFAnnotations(ExtensionLoader &loader) {

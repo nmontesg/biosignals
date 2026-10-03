@@ -2,12 +2,11 @@
 
 #include "duckdb.hpp" // IWYU pragma: keep
 #include "duckdb/storage/external_file_cache/caching_file_system.hpp"
+#include "read_edf_content.hpp"
 
 namespace duckdb {
 
-struct ReadEDFGlobalHeaderBindData : public TableFunctionData {
-	vector<OpenFileInfo> files;
-};
+struct ReadEDFGlobalHeaderBindData : public ReadEDFContentBindData {};
 
 unique_ptr<FunctionData> ReadEDFGlobalHeaderFuncBind(ClientContext &, TableFunctionBindInput &, vector<LogicalType> &,
                                                      vector<Identifier> &);
