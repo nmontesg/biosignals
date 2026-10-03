@@ -4,9 +4,6 @@
 #include "duckdb/common/vector.hpp"
 #include "duckdb/storage/external_file_cache/caching_file_system.hpp"
 
-// TODO remove
-#include <iostream>
-
 namespace duckdb {
 
 void BiosignalsEDFParser::CopyFromBuffer(char *buf, idx_t &offset, size_t num_bytes, char *dest) {
@@ -83,10 +80,6 @@ EDFGlobalHeader BiosignalsEDFParser::ParseGlobalHeader(unique_ptr<CachingFileHan
 	}
 	BiosignalsEDFParser::ParseFieldFromBuffer<string>(raw_header.patient_id, header.patient_id);
 	BiosignalsEDFParser::ParseFieldFromBuffer<string>(raw_header.recording_id, header.recording_id);
-	
-	std::cout << "header version: " << header.version << '\n';
-	std::cout << "header patient_id: " << header.patient_id << '\n';
-	std::cout << "header recording_id: " << header.recording_id << '\n';
 
 	string start_date;
 	BiosignalsEDFParser::ParseFieldFromBuffer<string>(raw_header.start_date, start_date);
