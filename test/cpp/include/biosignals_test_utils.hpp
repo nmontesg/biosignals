@@ -4,6 +4,7 @@
 
 #include "biosignals_edf_parser.hpp"
 #include "duckdb/main/database.hpp"
+#include "duckdb/storage/external_file_cache/caching_file_system.hpp"
 #include <sstream>
 #include <string>
 
