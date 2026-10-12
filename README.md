@@ -1,102 +1,121 @@
-# Quack
+<!-- markdownlint-disable MD041 -->
+# Biosignals extension for DuckDB
 
-This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
+**NOTE**: This extension is not supported in WebAssembly.
 
----
+## Features
 
-This extension, Quack, allow you to ... <extension_goal>.
+* Import EDF(+)/BDF(+) data and metadata directly into DuckDB.
 
+* Support for cloud files through the DuckDB [`httpfs`](https://duckdb.org/docs/current/core_extensions/httpfs/overview)
+extension.
 
-## Building
-### Managing dependencies
-DuckDB extensions uses VCPKG for dependency management. Enabling VCPKG is very simple: follow the [installation instructions](https://vcpkg.io/en/getting-started) or just run the following:
-```shell
-git clone https://github.com/Microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
-export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
-```
-Note: VCPKG is only required for extensions that want to rely on it for dependency management. If you want to develop an extension without dependencies, or want to do your own dependency management, just skip this step. Note that the example extension uses VCPKG to build with a dependency for instructive purposes, so when skipping this step the build may not work without removing the dependency.
+| **Format**   | **Support** |
+|--------------|---------|
+| EDF, BDF     | Yes     |
+| EDF+C, BDF+C | Yes     |
+| EDF+D, BDF+D | Yes     |
 
-### Build steps
-Now to build the extension, run:
-```sh
-make
-```
-The main binaries that will be built are:
-```sh
-./build/release/duckdb
-./build/release/test/unittest
-./build/release/extension/quack/quack.duckdb_extension
-```
-- `duckdb` is the binary for the duckdb shell with the extension code automatically loaded.
-- `unittest` is the test runner of duckdb. Again, the extension is already linked into the binary.
-- `quack.duckdb_extension` is the loadable binary as it would be distributed.
+## Quick start
 
-## Running the extension
-To run the extension code, simply start the shell with `./build/release/duckdb`.
-
-Now we can use the features from the extension directly in DuckDB. The template contains a single scalar function `quack()` that takes a string arguments and returns a string:
-```
-D select quack('Jane') as result;
-┌───────────────┐
-│    result     │
-│    varchar    │
-├───────────────┤
-│ Quack Jane 🐥 │
-└───────────────┘
-```
-
-## Running the tests
-Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
-```sh
-make test
-```
-
-### Installing the deployed binaries
-To install your extension binaries from S3, you will need to do two things. Firstly, DuckDB should be launched with the
-`allow_unsigned_extensions` option set to true. How to set this will depend on the client you're using. Some examples:
-
-CLI:
-```shell
-duckdb -unsigned
-```
-
-Python:
-```python
-con = duckdb.connect(':memory:', config={'allow_unsigned_extensions' : 'true'})
-```
-
-NodeJS:
-```js
-db = new duckdb.Database(':memory:', {"allow_unsigned_extensions": "true"});
-```
-
-Secondly, you will need to set the repository endpoint in DuckDB to the HTTP url of your bucket + version of the extension
-you want to install. To do this run the following SQL query in DuckDB:
 ```sql
-SET custom_extension_repository='bucket.s3.eu-west-1.amazonaws.com/<your_extension_name>/latest';
-```
-Note that the `/latest` path will allow you to install the latest extension version available for your current version of
-DuckDB. To specify a specific version, you can pass the version instead.
+INSTALL biosignals FROM community;
+LOAD biosignals;
 
-After running these steps, you can install and load your extension using the regular INSTALL/LOAD commands in DuckDB:
+FROM read_edf_global_header('path/to/edf_file.edf');
+FROM read_edf_global_header('path/to/many/edf/files/*.edf');
+```
+
+Import data from S3:
+
 ```sql
-INSTALL quack;
-LOAD quack;
+LOAD httpfs;
+
+CREATE OR REPLACE SECRET my_secret (
+    TYPE s3,
+    PROVIDER config,
+    KEY_ID 'my_key',
+    SECRET 'my_secret_key',
+    URL_STYLE 'path'
+);
+
+FROM read_edf_global_header('s3://my-bucket/path/to/my_edf_file.edf');
+FROM read_edf_global_header('s3://my-bucket/path/to/*.edf');
 ```
 
-## Setting up CLion
+## Table functions
 
-### Opening project
-Configuring CLion with this extension requires a little work. Firstly, make sure that the DuckDB submodule is available.
-Then make sure to open `./duckdb/CMakeLists.txt` (so not the top level `CMakeLists.txt` file from this repo) as a project in CLion.
-Now to fix your project path go to `tools->CMake->Change Project Root`([docs](https://www.jetbrains.com/help/clion/change-project-root-directory.html)) to set the project root to the root dir of this repo.
+All included table functions take as input the file path or glob pattern of the EDF(+)/BDF(+) file to be imported. Glob
+patterns are supported both local and remote files.
 
-### Debugging
-To set up debugging in CLion, there are two simple steps required. Firstly, in `CLion -> Settings / Preferences -> Build, Execution, Deploy -> CMake` you will need to add the desired builds (e.g. Debug, Release, RelDebug, etc). There's different ways to configure this, but the easiest is to leave all empty, except the `build path`, which needs to be set to `../build/{build type}`, and CMake Options to which the following flag should be added, with the path to the extension CMakeList:
+### `read_edf_global_header`
 
-```
--DDUCKDB_EXTENSION_CONFIGS=<path_to_the_exentension_CMakeLists.txt>
-```
+Import the global header information into a table, one row per file.
 
-The second step is to configure the unittest runner as a run/debug configuration. To do this, go to `Run -> Edit Configurations` and click `+ -> Cmake Application`. The target and executable should be `unittest`. This will run all the DuckDB tests. To specify only running the extension specific tests, add `--test-dir ../../.. [sql]` to the `Program Arguments`. Note that it is recommended to use the `unittest` executable for testing/development within CLion. The actual DuckDB CLI currently does not reliably work as a run target in CLion.
+**Return schema:**
+
+| Column Name | Data Type | Description |
+|-------------|-----------|-------------|
+| `filename` | `VARCHAR` | Path to the EDF(+)/BDF(+) file. |
+| `format` | `VARCHAR` | The file format. Options are: EDF, BDF, EDF+C, BDF+C, EDF+D, BDF+D. |
+| `version` | `VARCHAR` | The version included in the header. Null if empty. |
+| `patient_id` | `VARCHAR` | The patient ID included in the header. Null if empty. |
+| `recording_id` | `VARCHAR` | The recording ID included in the header. Null if empty. |
+| `start_datetime` | `TIMESTAMP` | The starting date and time of the recording, not including timezone information. |
+| `num_records` | `INTEGER` | The number of records included in the file. |
+| `duration` | `FLOAT` | The duration of each record in seconds. |
+| `num_signals` | `INTEGER` | The number of signals in the recording. |
+
+### `read_edf_signal_headers`
+
+Import the header information for each individual signals into a table, one row per every file signal.
+
+**Return schema:**
+
+| Column Name | Data Type | Description |
+|-------------|-----------|-------------|
+| `filename` | `VARCHAR` | Path to the EDF(+)/BDF(+) file. |
+| `signal_id` | `UINTEGER` | The signal ID, starting from 1 in the order of appearance in the header. |
+| `label` | `VARCHAR` | The signal label. Null if empty. |
+| `transducer_type` | `VARCHAR` | The transducer type. Null if empty. |
+| `physical_dim` | `VARCHAR` | The physical dimension. Null if empty. |
+| `physical_min` | `FLOAT` | The minimum value for the physical dimension. |
+| `physical_max` | `FLOAT` | The maximum value for the physical dimension. |
+| `digital_min` | `INTEGER` | The minimum value that can be recorded digitally. |
+| `digital_max` | `INTEGER` | The maximum value that can be recorded digitally. |
+| `prefiltering` | `VARCHAR` | The prefiltering applied to the signal. Null if empty. |
+| `samples_per_records` | `UINTEGER` | The number of samples for each record for that signal. |
+| `is_annotation` | `BOOLEAN` | Whether the signal contains annotations rather than digital recordings. |
+
+### `read_edf_signal`
+
+Import the time series data of EDF(+)/BDF(+) files into a table. Note that only non-annotation signals are included.
+
+**Return schema:**
+
+| Column Name | Data Type | Description |
+|-------------|-----------|-------------|
+| `filename` | `VARCHAR` | Path to the EDF(+)/BDF(+) file. |
+| `record_id` | `UINTEGER` | The record ID, starting from 1 in the order of appearance. |
+| `signal_id` | `UINTEGER` | The signal ID, starting from 1 in the order of appearance in the header. |
+| `timestep` | `UINTEGER` | The time step, i.e. the number of previous samples starting from 0. |
+| `time` | `DOUBLE` | The time since the start of the recording. |
+| `digital_signal` | `INTEGER` | The recorded digital signal. |
+| `physical_signal` | `FLOAT` | The digital signal converted into the physical dimension. |
+
+### `read_edf_annotations`
+
+Import the annotation data of EDF(+)/BDF(+) files into a table, one row per TAL (time-stamped annotation list). Note that
+only annotation signals are included.
+
+**Return schema:**
+
+| Column Name | Data Type | Description |
+|-------------|-----------|-------------|
+| `filename` | `VARCHAR` | Path to the EDF(+)/BDF(+) file. |
+| `record_id` | `UINTEGER` | The record ID, starting from 1 in the order of appearance. |
+| `signal_id` | `UINTEGER` | The signal ID, starting from 1 in the order of appearance in the header. |
+| `tal_id` | `UINTEGER` | The TAL ID, starting from 1 in the order of appearance. |
+| `onset` | `DOUBLE` | The time since the recording start that the TAL is valid. |
+| `duration` | `DOUBLE` | The length of time for which the TAL is valid. Null of empty. |
+| `annotations` | `VARCHAR[]` | The TAL, as a list of annotations. |

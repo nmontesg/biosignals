@@ -6,5 +6,5 @@ duckdb_extension_load(biosignals
 # Any extra extensions that should be built
 duckdb_extension_load(httpfs
     GIT_URL https://github.com/duckdb/duckdb-httpfs
-    GIT_TAG 7773e83d5151d8d38ad22f94cec5bf5ff63000ec
+    GIT_TAG d2e4b9de4180397f4b8fed80d0a4326d50cd3d61
 )

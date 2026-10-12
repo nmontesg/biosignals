@@ -6,6 +6,7 @@ add_library(
   TestBiosignalsCpp ${PROJECT_SOURCE_DIR}/src/biosignals_edf_parser.cpp
                     biosignals_test_utils.cpp)
 if(MINGW)
+  message(STATUS "Linking duckdb_static to target TestBiosignalsCpp")
   set(DUCKDB_TEST_LINK_TARGET duckdb_static)
 else()
   set(DUCKDB_TEST_LINK_TARGET duckdb)
