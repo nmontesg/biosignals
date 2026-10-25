@@ -2,20 +2,16 @@ include(CTest)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+set(TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../test_data)
+
 add_library(
   TestBiosignalsCpp ${PROJECT_SOURCE_DIR}/src/biosignals_edf_parser.cpp
                     biosignals_test_utils.cpp)
-if(MINGW)
-  message(STATUS "Linking duckdb_static to target TestBiosignalsCpp")
-  set(DUCKDB_TEST_LINK_TARGET duckdb_static)
-else()
-  set(DUCKDB_TEST_LINK_TARGET duckdb)
-endif()
-target_link_libraries(TestBiosignalsCpp PUBLIC ${DUCKDB_TEST_LINK_TARGET})
+target_link_libraries(TestBiosignalsCpp PUBLIC duckdb)
 
 function(add_biosignals_parsing_test TEST_NAME TEST_SCRIPT TEST_DATA_FILE)
   add_executable(${TEST_NAME} ${TEST_SCRIPT})
-  target_link_libraries(${TEST_NAME} TestBiosignalsCpp)
+  target_link_libraries(${TEST_NAME} PRIVATE TestBiosignalsCpp)
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME}
                                      ${TEST_DATA_DIR}/${TEST_DATA_FILE})
 endfunction()
