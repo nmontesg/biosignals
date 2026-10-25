@@ -9,7 +9,7 @@ target_link_libraries(TestBiosignalsCpp PUBLIC duckdb)
 
 function(add_biosignals_parsing_test TEST_NAME TEST_SCRIPT TEST_DATA_FILE)
   add_executable(${TEST_NAME} ${TEST_SCRIPT})
-  target_link_libraries(${TEST_NAME} PRIVATE TestBiosignalsCpp duckdb)
+  target_link_libraries(${TEST_NAME} PRIVATE TestBiosignalsCpp)
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME}
                                      ${TEST_DATA_DIR}/${TEST_DATA_FILE})
 endfunction()
