@@ -32,8 +32,10 @@ add_compile_definitions(PRIVATE BIOSIGNALS_WIN32_EXPORT)
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
 
-set(TEST_DATA_DIR ${CMAKE_SOURCE_DIR}/../test/test_data)
-add_subdirectory(test/cpp)
+if($ENV{LOCAL_BUILD})
+  message(STATUS "Local build will compile biosignals C++ tests")
+  add_subdirectory(test/cpp)
+endif()
 
 install(
   TARGETS ${EXTENSION_NAME}

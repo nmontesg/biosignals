@@ -1,6 +1,18 @@
 <!-- markdownlint-disable MD041 -->
 # Biosignals extension for DuckDB
 
+![GitHub Tag](https://img.shields.io/github/v/tag/nmontesg/biosignals)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/nmontesg/biosignals/MainDistributionPipeline.yml)
+![GitHub License](https://img.shields.io/github/license/nmontesg/biosignals)
+
+The **biosignals** extension for DuckDB provides reader functions to import medical time series data directly into
+DuckDB. This is suitable for storing and analyzing data in SQL that is typically stored in EDF(+) of BDF(+) files:
+
+* Electrocardiography (ECG)
+* Electroencephalography (EEG)
+* Polysomnography (PSG Sleep studies)
+* And many others
+
 **NOTE**: This extension is not supported in WebAssembly.
 
 ## Features

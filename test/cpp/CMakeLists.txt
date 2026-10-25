@@ -2,6 +2,8 @@ include(CTest)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+set(TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../test_data)
+
 add_library(
   TestBiosignalsCpp ${PROJECT_SOURCE_DIR}/src/biosignals_edf_parser.cpp
                     biosignals_test_utils.cpp)
