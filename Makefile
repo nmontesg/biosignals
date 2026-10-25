@@ -38,7 +38,7 @@ configure_aws_profile:
 
 setup_garage: configure_aws_profile stop_garage
 	podman run -d \
-		--name garage \
+		--name garage-biosignals \
 		-p 3900:3900 -p 3903:3903 \
 		-v $(shell pwd)/garage.toml:/etc/garage.toml \
 		-e GARAGE_DEFAULT_ACCESS_KEY=$(GARAGE_ACCESS_KEY) \
@@ -54,5 +54,5 @@ setup_garage: configure_aws_profile stop_garage
 		s3 sync $(LOCAL_DATA_SOURCE) s3://$(GARAGE_BUCKET)/$(GARAGE_DATA_DEST)
 
 stop_garage:
-	podman rm -f -v garage
+	podman rm -f -v garage-biosignals
 	podman volume rm -f garage.toml
