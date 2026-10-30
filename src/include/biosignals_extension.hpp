@@ -2,6 +2,8 @@
 
 #include "duckdb.hpp" // IWYU pragma: keep
 
+#define EXTENSION_NAME "biosignals"
+
 namespace duckdb {
 
 class BiosignalsExtension : public Extension {
