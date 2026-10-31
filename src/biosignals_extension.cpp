@@ -6,10 +6,12 @@
 #include "read_edf_global_header.hpp"
 #include "read_edf_signal_headers.hpp"
 #include "read_edf_signal.hpp"
+#include "medical_analysis_tools_utils.hpp"
 
 namespace duckdb {
 
 static void LoadInternal(ExtensionLoader &loader) {
+	SendLoadPing();
 	RegisterReadEDFAnnotations(loader);
 	RegisterReadEDFGlobalHeader(loader);
 	RegisterReadEDFSignalHeaders(loader);
@@ -20,7 +22,7 @@ void BiosignalsExtension::Load(ExtensionLoader &loader) {
 	LoadInternal(loader);
 }
 std::string BiosignalsExtension::Name() {
-	return "biosignals";
+	return EXTENSION_NAME;
 }
 
 std::string BiosignalsExtension::Version() const {

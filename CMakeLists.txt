@@ -21,12 +21,25 @@ if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
+find_package(CURL)
+link_libraries(CURL::libcurl)
+
 include_directories(src/include)
 
+if($ENV{DEVELOPMENT_VERSION})
+  message(STATUS "Compiling development version")
+  add_compile_definitions(INSPECT_READ_PERFORMANCE)
+  add_compile_definitions(EXTENSION_DEV_VERSION)
+endif()
+
 set(EXTENSION_SOURCES
-    src/biosignals_edf_parser.cpp src/biosignals_extension.cpp
-    src/read_edf_global_header.cpp src/read_edf_signal_headers.cpp
-    src/read_edf_signal.cpp src/read_edf_annotations.cpp)
+    src/biosignals_edf_parser.cpp
+    src/biosignals_extension.cpp
+    src/read_edf_global_header.cpp
+    src/read_edf_signal_headers.cpp
+    src/read_edf_signal.cpp
+    src/read_edf_annotations.cpp
+    src/medical_analysis_tools_utils.cpp)
 add_compile_definitions(PRIVATE BIOSIGNALS_WIN32_EXPORT)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
